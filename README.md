@@ -8,8 +8,7 @@ O **FIT GARDEN** é uma plataforma (Web e Mobile) de conexão e marketplace proj
 
 
 
-Atualmente, existe uma lacuna no mercado: consumidores têm dificuldade em encontrar opções confiáveis para dietas específicas, enquanto restaurantes saudáveis carecem de um canal centralizado para atingir seu público-alvo. O **FIT GARDEN** nasce para resolver esse problema, promovendo acessibilidade, saúde e novos negócios
-
+Atualmente, existe uma lacuna no mercado: consumidores têm dificuldade em encontrar opções confiáveis para dietas específicas, enquanto restaurantes saudáveis carecem de um canal centralizado para atingir seu público-alvo. O **FIT GARDEN** nasce para resolver esse problema, promovendo acessibilidade, saúde e novos negócios.
 ---
 
 ## 🎯 Objetivos
