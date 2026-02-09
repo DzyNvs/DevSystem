@@ -1,10 +1,10 @@
-# 🥗 FIT GARDEN
+# 🥗 FitWay
 
 > **Conectando saúde, sabor e oportunidades.**
 
 ## 📄 Sobre o Projeto
 
-O **FIT GARDEN** é uma plataforma (Web e Mobile) de conexão e marketplace projetada para ser o elo entre dois grupos fundamentais: **estabelecimentos do ramo alimentício voltados para a saúde** e **consumidores que buscam uma alimentação equilibrada**.
+O **FitWay** é uma plataforma (Web e Mobile) de conexão e marketplace projetada para ser o elo entre dois grupos fundamentais: **estabelecimentos do ramo alimentício voltados para a saúde** e **consumidores que buscam uma alimentação equilibrada**.
 
 
 
@@ -68,5 +68,5 @@ Contribuições são sempre bem-vindas! Se você deseja contribuir com o projeto
 
 
 <p align="center">
-  Desenvolvido com 💚 pela equipe FIT GARDEN
+  Desenvolvido com 💚 pela equipe DevSystem
 </p>
