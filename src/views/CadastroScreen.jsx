@@ -76,7 +76,7 @@ export function CadastroScreen() {
         secureTextEntry // Esconde a senha com bolinhas
       />
 
-      {/* Botão de Envio */}
+      {/* Botões do Final */}
       <View style={styles.botaoContainer}>
         {ctrl.carregando ? (
           <ActivityIndicator size="large" color="#0000ff" />
@@ -84,6 +84,16 @@ export function CadastroScreen() {
           <Button title="Realizar Cadastro" onPress={ctrl.handleCadastro} />
         )}
       </View>
+
+      <View style={styles.espaco} />
+
+      {/* <--- NOVO BOTÃO ADICIONADO AQUI ---> */}
+      <Button 
+        title="Já tem conta? Faça Login" 
+        onPress={ctrl.irParaLogin} 
+        color="#888888" 
+      />
+
     </ScrollView>
   );
 }
@@ -94,17 +104,17 @@ const styles = StyleSheet.create({
     padding: 20, 
     flexGrow: 1, 
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF' // <--- FORÇA O FUNDO BRANCO
+    backgroundColor: '#FFFFFF' // FORÇA O FUNDO BRANCO
   },
   titulo: { 
     fontSize: 24, 
     fontWeight: 'bold', 
     textAlign: 'center', 
     marginBottom: 20,
-    color: '#000000' // <--- FORÇA O TÍTULO PRETO
+    color: '#000000' // FORÇA O TÍTULO PRETO
   },
   label: {
-    color: '#000000', // <--- FORÇA OS LABELS PRETOS
+    color: '#000000', // FORÇA OS LABELS PRETOS
     marginBottom: 5,
     fontWeight: 'bold',
     fontSize: 16
@@ -130,7 +140,7 @@ const styles = StyleSheet.create({
     padding: 10, 
     marginBottom: 15, 
     borderRadius: 5,
-    color: '#000000', // <--- GARANTE QUE O TEXTO DIGITADO SEJA PRETO
+    color: '#000000', // GARANTE QUE O TEXTO DIGITADO SEJA PRETO
     backgroundColor: '#F9F9F9' // Fundo levemente cinza no input para destacar
   },
   botaoContainer: { 
@@ -141,5 +151,8 @@ const styles = StyleSheet.create({
     textAlign: 'center', 
     marginBottom: 15, 
     fontWeight: 'bold' 
+  },
+  espaco: {
+    height: 15 // Apenas para dar um respiro entre os botões
   }
 });

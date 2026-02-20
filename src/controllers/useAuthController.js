@@ -1,3 +1,4 @@
+import { router } from 'expo-router'; // <--- Adicionado para fazer a navegação
 import { useState } from 'react';
 import { AuthModel } from '../models/AuthModel';
 
@@ -42,6 +43,9 @@ export const useAuthController = () => {
         alert('Consumidor cadastrado com sucesso!');
       }
       
+      // Se o cadastro der certo, manda o usuário para o login (ou para a home futuramente)
+      router.replace('/');
+      
     } catch (error) {
       console.log("Erro capturado:", error); // Para te ajudar a ver o erro no console/terminal
       
@@ -78,11 +82,17 @@ export const useAuthController = () => {
     }
   };
 
+  // <--- NOVA FUNÇÃO ADICIONADA AQUI --->
+  const irParaLogin = () => {
+    // router.back() volta para a tela anterior na pilha de navegação (que é o Login)
+    router.back(); 
+  };
+
   return {
     isRestaurante, setIsRestaurante,
     email, setEmail, senha, setSenha,
     nome, setNome, cpf, setCpf, telefone, setTelefone, dataNascimento, setDataNascimento,
     nomeFantasia, setNomeFantasia, razaoSocial, setRazaoSocial, cnpj, setCnpj,
-    handleCadastro, carregando, erro
+    handleCadastro, carregando, erro, irParaLogin // <--- Exportando a nova função
   };
 };

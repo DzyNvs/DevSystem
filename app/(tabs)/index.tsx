@@ -1,5 +1,5 @@
-import { CadastroScreen } from '../../src/views/CadastroScreen';
+import { LoginScreen } from '../../src/views/LoginScreen';
 
 export default function Index() {
-  return <CadastroScreen />;
+  return <LoginScreen />;
 }
