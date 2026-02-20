@@ -1,37 +1,21 @@
-/*
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        headerShown: false, // Desliga o cabeçalho padrão para o nosso layout do Figma brilhar
+        tabBarStyle: { display: 'none' }, // Esconde a barra de botões lá de baixo
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+      
+      {/* O 'href: null' garante que, mesmo sendo uma Tab, não crie botão pra ela */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="cadastro" options={{ href: null }} />
+      <Tabs.Screen name="home-consumidor" options={{ href: null }} />
+      <Tabs.Screen name="home-restaurante" options={{ href: null }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
+      
     </Tabs>
   );
 }
-!*/
