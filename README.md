@@ -23,7 +23,7 @@ O principal objetivo da plataforma é integrar a oferta e a demanda de alimenta�
 
 ## 🚀 Benefícios da Solução
 
-A implementação do FIT GARDEN visa impactar o ecossistema de alimentação saudável gerando valor através de:
+A implementação do FITWAY visa impactar o ecossistema de alimentação saudável gerando valor através de:
 
 * 👁️ **Visibilidade de Mercado:** Ampliação do alcance dos estabelecimentos, conectando-os ao seu público ideal.
 * ⏳ **Facilidade e Acesso:** Centralização de opções, otimizando o tempo do consumidor.
