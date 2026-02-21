@@ -8,6 +8,13 @@ export const LoginModel = {
     const userCredential = await signInWithEmailAndPassword(auth, email, senha);
     const user = userCredential.user;
 
+    // --- NOVA TRAVA DE SEGURANÇA: VERIFICAÇÃO DE E-MAIL ---
+    if (!user.emailVerified) {
+      await signOut(auth); // Desloga imediatamente para não manter sessão ativa
+      throw new Error("EMAIL_NAO_VERIFICADO"); // Lança o erro para o Controller capturar
+    }
+    // ------------------------------------------------------
+
     // 2. Procura na coleção de Restaurantes para ver se ele é restaurante
     const restDoc = await getDoc(doc(db, "restaurantes", user.uid));
     if (restDoc.exists()) {
