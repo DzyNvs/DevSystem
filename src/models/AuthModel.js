@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
@@ -13,11 +13,14 @@ export const AuthModel = {
       throw new Error("CPF_JA_CADASTRADO");
     }
 
-    // 2. Se o CPF for novo, tenta criar o usuário no Login (O Firebase barra e-mail repetido aqui)
+    // 2. Se o CPF for novo, tenta criar o usuário no Login
     const userCredential = await createUserWithEmailAndPassword(auth, dados.email, dados.senha);
     const user = userCredential.user;
 
-    // 3. Salva os dados no banco
+    // 3. Dispara o e-mail de verificação nativo do Firebase
+    await sendEmailVerification(user);
+
+    // 4. Salva os dados no banco
     await setDoc(doc(db, "consumidores", user.uid), {
       nome: dados.nome,
       email: dados.email,
@@ -44,7 +47,10 @@ export const AuthModel = {
     const userCredential = await createUserWithEmailAndPassword(auth, dados.email, dados.senha);
     const user = userCredential.user;
 
-    // 3. Salva os dados
+    // 3. Dispara o e-mail de verificação nativo do Firebase
+    await sendEmailVerification(user);
+
+    // 4. Salva os dados no banco
     await setDoc(doc(db, "restaurantes", user.uid), {
       nome_fantasia: dados.nomeFantasia,
       razao_social: dados.razaoSocial,

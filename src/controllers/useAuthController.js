@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Alert, Platform } from 'react-native'; // <-- Adicionamos o Platform aqui
 import { AuthModel } from '../models/AuthModel';
 
 export const useAuthController = () => {
@@ -30,13 +31,21 @@ export const useAuthController = () => {
       if (isRestaurante) {
         if (!cnpj) throw new Error("CNPJ_VAZIO");
         await AuthModel.registrarRestaurante({ email, senha, nomeFantasia, razaoSocial, cnpj });
-        // Manda direto para a Home do Restaurante
-        router.replace('/home-restaurante');
       } else {
         if (!cpf) throw new Error("CPF_VAZIO");
         await AuthModel.registrarConsumidor({ email, senha, nome, cpf, telefone, dataNascimento });
-        // Manda direto para a Home do Consumidor
-        router.replace('/home-consumidor');
+      }
+
+      // Lógica de Alerta inteligente (funciona no celular e no navegador)
+      const mensagem = "Enviamos um link de verificação. Acesse sua caixa de entrada antes de fazer o login.";
+      
+      if (Platform.OS === 'web') {
+        window.alert(mensagem); // Alerta nativo do navegador
+        router.back(); // Volta a tela logo após o usuário fechar o alerta
+      } else {
+        Alert.alert("Verifique seu e-mail", mensagem, [
+          { text: "OK", onPress: () => router.back() }
+        ]);
       }
       
     } catch (error) {
