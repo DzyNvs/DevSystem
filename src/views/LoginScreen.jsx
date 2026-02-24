@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLoginController } from '../controllers/useLoginController';
 
 export function LoginScreen() {
   const ctrl = useLoginController();
+  const router = useRouter(); // <-- Adicionamos o router aqui
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
   return (
@@ -50,6 +52,14 @@ export function LoginScreen() {
                 <Ionicons name={mostrarSenha ? 'eye-off-outline' : 'eye-outline'} size={22} color="#8CC63F" />
              </TouchableOpacity>
           </View>
+
+          {/* --- BOTÃO ESQUECI MINHA SENHA --- */}
+          <TouchableOpacity 
+            style={styles.esqueciSenhaContainer} 
+            onPress={() => router.push('/esqueci-senha')}
+          >
+            <Text style={styles.esqueciSenhaTexto}>Esqueci minha senha</Text>
+          </TouchableOpacity>
 
           <View style={styles.botaoContainer}>
             {ctrl.carregando ? (
@@ -100,18 +110,28 @@ const styles = StyleSheet.create({
     color: '#333', 
     marginBottom: 15, 
     borderWidth: 0, 
-    outlineStyle: 'none' // Remove a borda de foco preta na Web
+    outlineStyle: 'none' 
   },
-  passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 12, marginBottom: 25 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 12, marginBottom: 10 }, // Reduzi a margem inferior para colar o link
   inputPassword: { 
     flex: 1, 
     paddingVertical: 15, 
     paddingHorizontal: 20, 
     fontSize: 16, 
     color: '#333',
-    outlineStyle: 'none' // Remove a borda de foco preta na Web
+    outlineStyle: 'none' 
   },
   eyeIconContainer: { padding: 15, justifyContent: 'center', alignItems: 'center' }, 
+  esqueciSenhaContainer: {
+    alignItems: 'flex-end', 
+    marginBottom: 25, 
+  },
+  esqueciSenhaTexto: {
+    color: '#8CC63F',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+
   botaoContainer: { marginTop: 10 },
   botaoVerde: { backgroundColor: '#8CC63F', paddingVertical: 18, borderRadius: 12, alignItems: 'center', shadowColor: '#8CC63F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 5 },
   textoBotaoVerde: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
