@@ -19,15 +19,17 @@ export const useLoginController = () => {
     setErro('');
 
     try {
-      // Recebe o usuário logado e o seu tipo
+      // Recebe o usuário logado e o seu tipo direto do seu Model
       const resultado = await LoginModel.entrar(email, senha);
       
-      // Redireciona baseado no tipo
+      // --- MUDANÇA: Redirecionando baseado no tipo de conta ---
+      // Agora o sistema verifica a ficha e manda para a sala certa
       if (resultado.tipo === 'restaurante') {
-        router.replace('/home-restaurante');
+        router.replace('/home-restaurante-screen');
       } else {
-        router.replace('/home-consumidor');
+        router.replace('/home-consumidor-screen');
       }
+      // -----------------------------------------------------------------
       
     } catch (error) {
       console.log("Erro no login:", error);

@@ -26,6 +26,10 @@ import {
   signInWithCredential
 } from 'firebase/auth';
 
+// --- IMPORTAÇÕES DO BANCO DE DADOS ---
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
 // Imagens (Caminhos mantidos conforme seu projeto)
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
@@ -44,17 +48,18 @@ export function LoginScreen() {
   // Estado local para o botão "Sou restaurante" 
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
 
-  // --- LÓGICA DO GOOGLE (Client ID recuperado da nossa memória) ---
+  // --- LÓGICA DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
+    prompt: 'select_account', // <-- Força a tela de escolher a conta do Google
   });
 
-  // --- LÓGICA DO FACEBOOK (App ID recuperado da nossa memória) ---
+  // --- LÓGICA DO FACEBOOK ---
   const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
     clientId: '1241106417521930',
   });
 
-  // Efeito para escutar o retorno do Google
+  // --- EFEITO GOOGLE: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
@@ -62,9 +67,41 @@ export function LoginScreen() {
       const credential = GoogleAuthProvider.credential(id_token);
 
       signInWithCredential(auth, credential)
-        .then((resultado) => {
-          alert(`Bem-vindo ao FitWay, ${resultado.user.displayName}! 🥗`);
-          router.replace('/(tabs)'); // Redireciona para a Home após sucesso
+        .then(async (resultado) => {
+          const user = resultado.user;
+          
+          // 1. Procura primeiro na tabela de Consumidores
+          let userRef = doc(db, 'consumidores', user.uid);
+          let userSnap = await getDoc(userRef);
+
+          // 2. Se não achar nos consumidores, procura nos Restaurantes
+          if (!userSnap.exists()) {
+            userRef = doc(db, 'restaurantes', user.uid);
+            userSnap = await getDoc(userRef);
+          }
+
+          if (userSnap.exists()) {
+            // ACHOU EM ALGUMA DELAS! Pega os dados
+            const dadosUsuario = userSnap.data();
+            alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
+
+            // Decide qual tela abrir baseado no tipoConta salvo
+            if (dadosUsuario.tipoConta === 'restaurante') {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/home-consumidor-screen');
+            }
+
+          } else {
+            // NÃO ACHOU EM LUGAR NENHUM! (Usuário novo)
+            // Usa o botão "Sou restaurante" para decidir a tela de completar o cadastro
+            const telaDestino = highlightRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+            
+            router.push({
+              pathname: telaDestino,
+              params: { uid: user.uid, nome: user.displayName, email: user.email }
+            });
+          }
         })
         .catch((erro) => {
           console.error(erro);
@@ -73,7 +110,7 @@ export function LoginScreen() {
     }
   }, [response]);
 
-  // Efeito para escutar o retorno do Facebook
+  // --- EFEITO FACEBOOK: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (fbResponse?.type === 'success') {
       const { access_token } = fbResponse.params;
@@ -81,9 +118,41 @@ export function LoginScreen() {
       const credential = FacebookAuthProvider.credential(access_token);
 
       signInWithCredential(auth, credential)
-        .then((resultado) => {
-          alert(`Bem-vindo ao FitWay, ${resultado.user.displayName}! 🥗`);
-          router.replace('/(tabs)');
+        .then(async (resultado) => {
+          const user = resultado.user;
+          
+          // 1. Procura primeiro na tabela de Consumidores
+          let userRef = doc(db, 'consumidores', user.uid);
+          let userSnap = await getDoc(userRef);
+
+          // 2. Se não achar nos consumidores, procura nos Restaurantes
+          if (!userSnap.exists()) {
+            userRef = doc(db, 'restaurantes', user.uid);
+            userSnap = await getDoc(userRef);
+          }
+
+          if (userSnap.exists()) {
+            // ACHOU EM ALGUMA DELAS! Pega os dados
+            const dadosUsuario = userSnap.data();
+            alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
+
+            // Decide qual tela abrir baseado no tipoConta salvo
+            if (dadosUsuario.tipoConta === 'restaurante') {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/home-consumidor-screen');
+            }
+
+          } else {
+            // NÃO ACHOU EM LUGAR NENHUM! (Usuário novo)
+            // Usa o botão "Sou restaurante" para decidir a tela de completar o cadastro
+            const telaDestino = highlightRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+            
+            router.push({
+              pathname: telaDestino,
+              params: { uid: user.uid, nome: user.displayName, email: user.email }
+            });
+          }
         })
         .catch((erro) => {
           console.error(erro);

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router'; // <-- ADICIONADO para navegar após o login
+import React, { useEffect, useState } from 'react'; // <-- useEffect ADICIONADO
 import {
   ActivityIndicator,
   Image,
@@ -16,16 +17,152 @@ import {
 } from 'react-native';
 import { useAuthController } from '../controllers/useAuthController';
 
+// --- IMPORTAÇÕES DO FIREBASE E SOCIAL AUTH ---
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  FacebookAuthProvider,
+  GoogleAuthProvider,
+  getAuth,
+  signInWithCredential
+} from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore'; // Removido o setDoc pois a gravação é feita na tela de completar
+import { db } from '../config/firebase';
+
 // Imagens
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
 const store = require('../../assets/images/store.png');
 const capa3 = require('../../assets/images/capa3.png');
+const googleIcon = require('../../assets/images/google.png'); // Declarado para evitar erro
+const facebookIcon = require('../../assets/images/facebook.png'); // Declarado para evitar erro
+
+// Essencial para o navegador fechar após o login social
+WebBrowser.maybeCompleteAuthSession();
 
 export function CadastroScreen() {
   const ctrl = useAuthController();
+  const router = useRouter(); // <-- ADICIONADO
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // --- LÓGICA DO GOOGLE ---
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
+    prompt: 'select_account', // <-- Força a tela de escolher a conta do Google
+  });
+
+  // --- LÓGICA DO FACEBOOK ---
+  const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
+    clientId: '1241106417521930',
+  });
+
+  // --- EFEITO GOOGLE: PROCURANDO NAS DUAS TABELAS ---
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const auth = getAuth();
+      const credential = GoogleAuthProvider.credential(id_token);
+
+      signInWithCredential(auth, credential)
+        .then(async (resultado) => {
+          const user = resultado.user;
+          
+          // 1. Procura primeiro na tabela de Consumidores
+          let userRef = doc(db, 'consumidores', user.uid);
+          let userSnap = await getDoc(userRef);
+
+          // 2. Se não achar nos consumidores, procura nos Restaurantes
+          if (!userSnap.exists()) {
+            userRef = doc(db, 'restaurantes', user.uid);
+            userSnap = await getDoc(userRef);
+          }
+
+          if (!userSnap.exists()) {
+            // NÃO ACHOU EM NENHUMA! É UM USUÁRIO 100% NOVO! 
+            // Verifica o botão "Sou Restaurante" para mandar para a tela certa
+            const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+
+            router.push({
+              pathname: telaDestino,
+              params: {
+                uid: user.uid,
+                nome: user.displayName || 'Usuário FitWay',
+                email: user.email
+              }
+            });
+          } else {
+            // ACHOU EM ALGUMA DELAS! Lê os dados e manda para a Home certa.
+            const dadosUsuario = userSnap.data();
+            alert(`Bem-vindo de volta, ${user.displayName}! 🥗`);
+            
+            if (dadosUsuario.tipoConta === 'restaurante') {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/home-consumidor-screen');
+            }
+          }
+        })
+        .catch((erro) => {
+          console.error(erro);
+          ctrl.setErro('Erro ao processar o cadastro com o Google.');
+        });
+    }
+  }, [response]);
+
+  // --- EFEITO FACEBOOK: PROCURANDO NAS DUAS TABELAS ---
+  useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { access_token } = fbResponse.params;
+      const auth = getAuth();
+      const credential = FacebookAuthProvider.credential(access_token);
+
+      signInWithCredential(auth, credential)
+        .then(async (resultado) => {
+          const user = resultado.user;
+          
+          // 1. Procura primeiro na tabela de Consumidores
+          let userRef = doc(db, 'consumidores', user.uid);
+          let userSnap = await getDoc(userRef);
+
+          // 2. Se não achar nos consumidores, procura nos Restaurantes
+          if (!userSnap.exists()) {
+            userRef = doc(db, 'restaurantes', user.uid);
+            userSnap = await getDoc(userRef);
+          }
+
+          if (!userSnap.exists()) {
+            // NÃO ACHOU EM NENHUMA! É UM USUÁRIO 100% NOVO!
+            // Verifica o botão "Sou Restaurante" para mandar para a tela certa
+            const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+
+            router.push({
+              pathname: telaDestino,
+              params: {
+                uid: user.uid,
+                nome: user.displayName || 'Usuário FitWay',
+                email: user.email
+              }
+            });
+          } else {
+            // ACHOU EM ALGUMA DELAS! Lê os dados e manda para a Home certa.
+            const dadosUsuario = userSnap.data();
+            alert(`Bem-vindo de volta, ${user.displayName}! 🥗`);
+            
+            if (dadosUsuario.tipoConta === 'restaurante') {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/home-consumidor-screen');
+            }
+          }
+        })
+        .catch((erro) => {
+          console.error(erro);
+          ctrl.setErro('Erro ao processar o cadastro com o Facebook.');
+        });
+    }
+  }, [fbResponse]);
 
   // Função para aplicar máscara de data (DD/MM/AAAA)
   const aplicarMascaraData = (texto) => {
@@ -33,7 +170,7 @@ export function CadastroScreen() {
     const numeros = texto.replace(/\D/g, '');
     // Limita a 8 dígitos
     const numerosLimitados = numeros.slice(0, 8);
-    
+
     // Aplica a máscara: DD/MM/AAAA
     let formatado = '';
     for (let i = 0; i < numerosLimitados.length; i++) {
@@ -310,14 +447,22 @@ export function CadastroScreen() {
                 <View style={styles.linhaDivisor} />
               </View>
 
-              {/* Botões sociais */}
-              <TouchableOpacity style={styles.botaoSocialGoogle}>
-                <Image source={require('../../assets/images/google.png')} style={styles.socialIcon} resizeMode="contain" />
+              {/* Botões sociais (ADICIONADO OS EVENTOS onPress E disabled) */}
+              <TouchableOpacity
+                style={styles.botaoSocialGoogle}
+                onPress={() => promptAsync()}
+                disabled={!request}
+              >
+                <Image source={googleIcon} style={styles.socialIcon} resizeMode="contain" />
                 <Text style={styles.textoSocialGoogle}>Continuar com Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.botaoSocialFacebook}>
-                <Image source={require('../../assets/images/facebook.png')} style={styles.socialIcon} resizeMode="contain" />
+              <TouchableOpacity
+                style={styles.botaoSocialFacebook}
+                onPress={() => fbPromptAsync()}
+                disabled={!fbRequest}
+              >
+                <Image source={facebookIcon} style={styles.socialIcon} resizeMode="contain" />
                 <Text style={styles.textoSocialFacebook}>Continuar com Facebook</Text>
               </TouchableOpacity>
 
@@ -390,7 +535,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   restauranteAtivo: {
-    backgroundColor: '#93BD57', 
+    backgroundColor: '#93BD57',
   },
   restauranteText: {
     fontSize: 14,
