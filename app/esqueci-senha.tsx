@@ -12,9 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { API_URL } from '../src/config/api'; // <-- Mágica do IP automático importada!
+// Importações do Firebase
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
-// Imagens do cabeçalho e capa
+// Imagens do cabeçalho e capa - Caminhos conforme sua estrutura
 const logo = require('../assets/images/logo.png');
 const vector = require('../assets/images/vector.png');
 const store = require('../assets/images/store.png');
@@ -24,7 +25,6 @@ export default function EsqueciSenha() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  // Estado para o destaque do botão "Sou restaurante" 
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
 
   const handleEnviar = async () => {
@@ -36,28 +36,31 @@ export default function EsqueciSenha() {
     setLoading(true);
 
     try {
-      // Fazendo a requisição real usando a nossa variável inteligente
-      const response = await fetch(`${API_URL}/esqueci-senha`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: email }),
-      });
+      const auth = getAuth(); // Pega a instância configurada no seu firebaseConfig
 
-      const data = await response.json();
+      // O Firebase cuidará de todo o processo de envio do link
+      await sendPasswordResetEmail(auth, email);
 
-      if (response.ok) {
-        // Se deu sucesso, vai para a tela do código e manda o e-mail na URL
-        router.push(`/inserir-codigo?emailDaRecuperacao=${email}`);
-      } else {
-        // Se o email não existir no banco, o backend avisa aqui
-        alert(data.message || "Erro ao solicitar o código.");
+      // Feedback de sucesso conforme configurado no seu console Firebase
+      alert("Sucesso! Um link de redefinição foi enviado para o seu e-mail. Verifique sua caixa de entrada e spam. 🥗");
+
+      // Após o envio, voltamos para a tela de login
+      router.replace('/'); 
+
+    } catch (error: any) {
+      console.error("Erro Firebase Auth:", error.code);
+      
+      // Tratamento de erros específicos para o usuário do FitWay
+      switch (error.code) {
+        case 'auth/user-not-found':
+          alert("Este e-mail não está cadastrado no sistema.");
+          break;
+        case 'auth/invalid-email':
+          alert("O formato do e-mail inserido é inválido.");
+          break;
+        default:
+          alert("Erro ao solicitar a recuperação. Tente novamente mais tarde.");
       }
-
-    } catch (error) {
-      console.error("Erro no fetch:", error);
-      alert("Erro de conexão com o servidor. Verifique se o backend está rodando e o IP está correto.");
     } finally {
       setLoading(false);
     }
@@ -67,8 +70,8 @@ export default function EsqueciSenha() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho igual o da tela de login */}
-       <View style={styles.header}>
+      {/* Cabeçalho */}
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
           <View style={styles.rightItems}>
@@ -97,7 +100,6 @@ export default function EsqueciSenha() {
         </View>
       </View>
 
-      {/* Conteúdo principal */}
       <View style={styles.mainContainer}>
         {/* Coluna do formulário */}
         <View style={styles.leftColumn}>
@@ -124,17 +126,13 @@ export default function EsqueciSenha() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Enviar Código</Text>
+                <Text style={styles.buttonText}>Enviar Link de Recuperação</Text>
               )}
             </TouchableOpacity>
 
-            {/* Botão de Voltar */}
             <TouchableOpacity 
               style={styles.buttonVoltar} 
-              onPress={() => {
-                console.log("Voltar pressionado"); 
-                router.replace('/'); // Vai direto para a tela de login 
-              }}
+              onPress={() => router.replace('/')}
             >
               <Text style={styles.buttonVoltarText}>Voltar</Text>
             </TouchableOpacity>
@@ -156,16 +154,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  // Cabeçalho igual o da tela de login
   header: {
     height: 75,
     backgroundColor: '#F2E3BB',
     paddingHorizontal: 40,
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 5,
   },
   headerContent: {
@@ -174,15 +167,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  logo: {
-    width: 110,
-    height: 55,
-  },
-  rightItems: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 40,
-  },
+  logo: { width: 110, height: 55 },
+  rightItems: { flexDirection: 'row', alignItems: 'center', gap: 40 },
   restauranteGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,41 +176,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
   },
-  restauranteAtivo: {
-    backgroundColor: '#93BD57',
-  },
-  restauranteText: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  restauranteTextAtivo: {
-    color: '#FFFFFF',
-  },
-  storeIcon: {
-    width: 22,
-    height: 22,
-  },
-  ambienteGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ambienteText: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  vectorIcon: {
-    width: 22,
-    height: 22,
-  },
-  // Container principal
-  mainContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
+  restauranteAtivo: { backgroundColor: '#93BD57' },
+  restauranteText: { fontSize: 14, color: '#555', fontWeight: '600', marginLeft: 8 },
+  restauranteTextAtivo: { color: '#FFFFFF' },
+  storeIcon: { width: 22, height: 22 },
+  ambienteGroup: { flexDirection: 'row', alignItems: 'center' },
+  ambienteText: { fontSize: 14, color: '#555', fontWeight: '600', marginLeft: 8 },
+  vectorIcon: { width: 22, height: 22 },
+  mainContainer: { flex: 1, flexDirection: 'row' },
   leftColumn: {
     flex: 1,
     justifyContent: 'center',
@@ -232,10 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     backgroundColor: '#FFFFFF',
   },
-  formContainer: {
-    width: '100%',
-    maxWidth: 500, 
-  },
+  formContainer: { width: '100%', maxWidth: 500 },
   titulo: {
     color: '#000',
     textAlign: 'center',
@@ -286,14 +242,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16, 
   },
-  buttonDisabled: {
-    backgroundColor: '#a5d674',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  buttonDisabled: { backgroundColor: '#a5d674' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   buttonVoltar: {
     width: '100%',
     height: 48,
@@ -303,19 +253,8 @@ const styles = StyleSheet.create({
     borderColor: '#A0A6B6', 
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 0, 
   },
-  buttonVoltarText: {
-    color: '#2A2D34', 
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rightColumn: {
-    flex: 1,
-    backgroundColor: '#F2E3BB',
-  },
-  capaImage: {
-    width: '100%',
-    height: '100%',
-  },
+  buttonVoltarText: { color: '#2A2D34', fontSize: 16, fontWeight: '600' },
+  rightColumn: { flex: 1, backgroundColor: '#F2E3BB' },
+  capaImage: { width: '100%', height: '100%' },
 });

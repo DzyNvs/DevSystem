@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react'; // useEffect adicionado para monitorar o login
 import {
   ActivityIndicator,
   Image,
@@ -15,7 +15,18 @@ import {
 } from 'react-native';
 import { useLoginController } from '../controllers/useLoginController';
 
-// Imagens
+// --- IMPORTAÇÕES PARA O GOOGLE E FACEBOOK ---
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  FacebookAuthProvider,
+  GoogleAuthProvider,
+  getAuth,
+  signInWithCredential
+} from 'firebase/auth';
+
+// Imagens (Caminhos mantidos conforme seu projeto)
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
 const store = require('../../assets/images/store.png');
@@ -23,12 +34,63 @@ const capa = require('../../assets/images/capa.png');
 const google = require('../../assets/images/google.png');
 const facebook = require('../../assets/images/facebook.png');
 
+// Essencial para o navegador fechar após o login
+WebBrowser.maybeCompleteAuthSession();
+
 export function LoginScreen() {
   const ctrl = useLoginController();
   const router = useRouter();
   const [mostrarSenha, setMostrarSenha] = useState(false);
   // Estado local para o botão "Sou restaurante" 
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
+
+  // --- LÓGICA DO GOOGLE (Client ID recuperado da nossa memória) ---
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
+  });
+
+  // --- LÓGICA DO FACEBOOK (App ID recuperado da nossa memória) ---
+  const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
+    clientId: '1241106417521930',
+  });
+
+  // Efeito para escutar o retorno do Google
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const auth = getAuth();
+      const credential = GoogleAuthProvider.credential(id_token);
+
+      signInWithCredential(auth, credential)
+        .then((resultado) => {
+          alert(`Bem-vindo ao FitWay, ${resultado.user.displayName}! 🥗`);
+          router.replace('/(tabs)'); // Redireciona para a Home após sucesso
+        })
+        .catch((erro) => {
+          console.error(erro);
+          ctrl.setErro('Erro ao entrar com o Google.');
+        });
+    }
+  }, [response]);
+
+  // Efeito para escutar o retorno do Facebook
+  useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { access_token } = fbResponse.params;
+      const auth = getAuth();
+      const credential = FacebookAuthProvider.credential(access_token);
+
+      signInWithCredential(auth, credential)
+        .then((resultado) => {
+          alert(`Bem-vindo ao FitWay, ${resultado.user.displayName}! 🥗`);
+          router.replace('/(tabs)');
+        })
+        .catch((erro) => {
+          console.error(erro);
+          ctrl.setErro('Erro ao entrar com o Facebook.');
+        });
+    }
+  }, [fbResponse]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -86,7 +148,6 @@ export function LoginScreen() {
             />
 
             <Text style={styles.label}>Senha</Text>
-            {/* Container do campo de senha com ícone */}
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.inputPassword}
@@ -128,12 +189,22 @@ export function LoginScreen() {
               <View style={styles.linhaDivisor} />
             </View>
 
-            <TouchableOpacity style={styles.botaoSocialGoogle}>
+            {/* BOTÃO GOOGLE INTEGRADO */}
+            <TouchableOpacity 
+              style={styles.botaoSocialGoogle} 
+              onPress={() => promptAsync()}
+              disabled={!request}
+            >
               <Image source={google} style={styles.socialIcon} resizeMode="contain" />
               <Text style={styles.textoSocialGoogle}>Continuar com Google</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.botaoSocialFacebook}>
+            {/* BOTÃO FACEBOOK INTEGRADO */}
+            <TouchableOpacity 
+              style={styles.botaoSocialFacebook}
+              onPress={() => fbPromptAsync()}
+              disabled={!fbRequest}
+            >
               <Image source={facebook} style={styles.socialIcon} resizeMode="contain" />
               <Text style={styles.textoSocialFacebook}>Continuar com Facebook</Text>
             </TouchableOpacity>
