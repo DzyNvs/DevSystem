@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react'; // <-- useEffect ADICIONADO
 import {
   ActivityIndicator,
   Image,
-  Platform,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -14,6 +14,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions
 } from 'react-native';
 import { useAuthController } from '../controllers/useAuthController';
 
@@ -46,6 +47,10 @@ export function CadastroScreen() {
   const router = useRouter(); // <-- ADICIONADO
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false); 
+
+  const { width } = useWindowDimensions(); // <-- ADICIONADO hook
+  const isSmallScreen = width < 768; // <-- ADICIONADO breakpoint para mobile
 
   // --- LÓGICA DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -228,37 +233,93 @@ export function CadastroScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho com opção "Sou restaurante" clicável */}
-      <View style={styles.header}>
+      {/* Cabeçalho com menu hamburger em mobile */}
+      <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
-          <View style={styles.rightItems}>
-            {/* Grupo "Sou restaurante" clicável com cor de fundo quando ativo */}
+          
+          {isSmallScreen ? (
+            // Em telas pequenas, mostra o ícone do menu
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
+              <Ionicons name="menu" size={30} color="#555" />
+            </TouchableOpacity>
+          ) : (
+            // Em telas grandes, mostra os itens normalmente
+            <View style={styles.rightItems}>
+              {/* Grupo "Sou restaurante" clicável com cor de fundo quando ativo */}
+              <TouchableOpacity
+                style={[
+                  styles.restauranteGroup,
+                  ctrl.isRestaurante && styles.restauranteAtivo,
+                ]}
+                onPress={alternarTipo}
+              >
+                <Image source={store} style={styles.storeIcon} resizeMode="contain" />
+                <Text
+                  style={[
+                    styles.restauranteText,
+                    ctrl.isRestaurante && styles.restauranteTextAtivo,
+                  ]}
+                >
+                  Sou restaurante
+                </Text>
+              </TouchableOpacity>
+              {/* Grupo "Ambiente 100% seguro" estático */}
+              <View style={styles.ambienteGroup}>
+                <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
+                <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Menu hamburger */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Opções</Text>
+              <TouchableOpacity onPress={() => setMenuVisible(false)}>
+                <Ionicons name="close" size={30} color="#555" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Item "Sou restaurante" clicável */}
             <TouchableOpacity
               style={[
-                styles.restauranteGroup,
+                styles.modalItem,
                 ctrl.isRestaurante && styles.restauranteAtivo,
               ]}
-              onPress={alternarTipo}
+              onPress={() => {
+                alternarTipo();
+                setMenuVisible(false);
+              }}
             >
               <Image source={store} style={styles.storeIcon} resizeMode="contain" />
               <Text
                 style={[
-                  styles.restauranteText,
+                  styles.modalItemText,
                   ctrl.isRestaurante && styles.restauranteTextAtivo,
                 ]}
               >
                 Sou restaurante
               </Text>
             </TouchableOpacity>
-            {/* Grupo "Ambiente 100% seguro" estático */}
-            <View style={styles.ambienteGroup}>
+
+            {/* Item "Ambiente 100% seguro" informativo */}
+            <View style={styles.modalItem}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-              <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
             </View>
           </View>
         </View>
-      </View>
+      </Modal>
 
       {/* Conteúdo principal */}
       <View style={styles.mainContainer}>
@@ -476,10 +537,12 @@ export function CadastroScreen() {
           </ScrollView>
         </View>
 
-        {/* Coluna imagem */}
-        <View style={styles.rightColumn}>
-          <Image source={capa3} style={styles.capaImage} resizeMode="cover" />
-        </View>
+        {/* Coluna imagem - escondida em mobile */}
+        {!isSmallScreen && (
+          <View style={styles.rightColumn}>
+            <Image source={capa3} style={styles.capaImage} resizeMode="cover" />
+          </View>
+        )}
       </View>
 
       {/* DatePicker */}
@@ -499,7 +562,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     height: 75,
@@ -512,6 +574,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  headerSmall: {
+    paddingHorizontal: 20,
+  },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -521,6 +586,9 @@ const styles = StyleSheet.create({
   logo: {
     width: 110,
     height: 55,
+  },
+  menuButton: {
+    padding: 5,
   },
   rightItems: {
     flexDirection: 'row',
@@ -563,6 +631,42 @@ const styles = StyleSheet.create({
   vectorIcon: {
     width: 22,
     height: 22,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#F2E3BB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 200,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2A2D34',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#555',
+    marginLeft: 12,
   },
   mainContainer: {
     flex: 1,

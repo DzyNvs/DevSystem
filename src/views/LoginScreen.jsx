@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react'; // useEffect adicionado para monitorar o login
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Platform,
+  Modal,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions
 } from 'react-native';
 import { useLoginController } from '../controllers/useLoginController';
 
@@ -30,7 +32,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Imagens (Caminhos mantidos conforme seu projeto)
+// Imagens 
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
 const store = require('../../assets/images/store.png');
@@ -45,13 +47,16 @@ export function LoginScreen() {
   const ctrl = useLoginController();
   const router = useRouter();
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  // Estado local para o botão "Sou restaurante" 
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 768;
 
   // --- LÓGICA DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
-    prompt: 'select_account', // <-- Força a tela de escolher a conta do Google
+    prompt: 'select_account',
   });
 
   // --- LÓGICA DO FACEBOOK ---
@@ -70,22 +75,18 @@ export function LoginScreen() {
         .then(async (resultado) => {
           const user = resultado.user;
           
-          // 1. Procura primeiro na tabela de Consumidores
           let userRef = doc(db, 'consumidores', user.uid);
           let userSnap = await getDoc(userRef);
 
-          // 2. Se não achar nos consumidores, procura nos Restaurantes
           if (!userSnap.exists()) {
             userRef = doc(db, 'restaurantes', user.uid);
             userSnap = await getDoc(userRef);
           }
 
           if (userSnap.exists()) {
-            // ACHOU EM ALGUMA DELAS! Pega os dados
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
 
-            // Decide qual tela abrir baseado no tipoConta salvo
             if (dadosUsuario.tipoConta === 'restaurante') {
               router.replace('/home-restaurante-screen');
             } else {
@@ -93,8 +94,6 @@ export function LoginScreen() {
             }
 
           } else {
-            // NÃO ACHOU EM LUGAR NENHUM! (Usuário novo)
-            // Usa o botão "Sou restaurante" para decidir a tela de completar o cadastro
             const telaDestino = highlightRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
             
             router.push({
@@ -121,22 +120,18 @@ export function LoginScreen() {
         .then(async (resultado) => {
           const user = resultado.user;
           
-          // 1. Procura primeiro na tabela de Consumidores
           let userRef = doc(db, 'consumidores', user.uid);
           let userSnap = await getDoc(userRef);
 
-          // 2. Se não achar nos consumidores, procura nos Restaurantes
           if (!userSnap.exists()) {
             userRef = doc(db, 'restaurantes', user.uid);
             userSnap = await getDoc(userRef);
           }
 
           if (userSnap.exists()) {
-            // ACHOU EM ALGUMA DELAS! Pega os dados
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
 
-            // Decide qual tela abrir baseado no tipoConta salvo
             if (dadosUsuario.tipoConta === 'restaurante') {
               router.replace('/home-restaurante-screen');
             } else {
@@ -144,8 +139,6 @@ export function LoginScreen() {
             }
 
           } else {
-            // NÃO ACHOU EM LUGAR NENHUM! (Usuário novo)
-            // Usa o botão "Sou restaurante" para decidir a tela de completar o cadastro
             const telaDestino = highlightRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
             
             router.push({
@@ -165,40 +158,99 @@ export function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho com botão "Sou restaurante" clicável */}
-      <View style={styles.header}>
+      {/* Cabeçalho com menu hamburger em mobile */}
+      <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
-          <View style={styles.rightItems}>
+          
+          {isSmallScreen ? (
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
+              <Ionicons name="menu" size={30} color="#555" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.rightItems}>
+              <TouchableOpacity
+                style={[
+                  styles.restauranteGroup,
+                  highlightRestaurante && styles.restauranteAtivo,
+                ]}
+                onPress={() => setHighlightRestaurante(!highlightRestaurante)}
+              >
+                <Image source={store} style={styles.storeIcon} resizeMode="contain" />
+                <Text
+                  style={[
+                    styles.restauranteText,
+                    highlightRestaurante && styles.restauranteTextAtivo,
+                  ]}
+                >
+                  Sou restaurante
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.ambienteGroup}>
+                <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
+                <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Menu hamburger */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Opções</Text>
+              <TouchableOpacity onPress={() => setMenuVisible(false)}>
+                <Ionicons name="close" size={30} color="#555" />
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={[
-                styles.restauranteGroup,
+                styles.modalItem,
                 highlightRestaurante && styles.restauranteAtivo,
               ]}
-              onPress={() => setHighlightRestaurante(!highlightRestaurante)}
+              onPress={() => {
+                setHighlightRestaurante(!highlightRestaurante);
+                setMenuVisible(false);
+              }}
             >
               <Image source={store} style={styles.storeIcon} resizeMode="contain" />
               <Text
                 style={[
-                  styles.restauranteText,
+                  styles.modalItemText,
                   highlightRestaurante && styles.restauranteTextAtivo,
                 ]}
               >
                 Sou restaurante
               </Text>
             </TouchableOpacity>
-            <View style={styles.ambienteGroup}>
+
+            <View style={styles.modalItem}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-              <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
             </View>
           </View>
         </View>
-      </View>
+      </Modal>
 
       {/* Conteúdo principal */}
       <View style={styles.mainContainer}>
         {/* Coluna formulário */}
-        <View style={styles.leftColumn}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.leftColumn,
+            isSmallScreen && styles.leftColumnFull,
+            { flexGrow: 1, justifyContent: 'center' }
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.formContainer}>
             <Text style={styles.tituloAcessar}>Acessar conta</Text>
             <Text style={styles.subtitulo}>Entre com seus dados para entrar em sua conta</Text>
@@ -258,7 +310,6 @@ export function LoginScreen() {
               <View style={styles.linhaDivisor} />
             </View>
 
-            {/* BOTÃO GOOGLE INTEGRADO */}
             <TouchableOpacity 
               style={styles.botaoSocialGoogle} 
               onPress={() => promptAsync()}
@@ -268,7 +319,6 @@ export function LoginScreen() {
               <Text style={styles.textoSocialGoogle}>Continuar com Google</Text>
             </TouchableOpacity>
 
-            {/* BOTÃO FACEBOOK INTEGRADO */}
             <TouchableOpacity 
               style={styles.botaoSocialFacebook}
               onPress={() => fbPromptAsync()}
@@ -284,12 +334,14 @@ export function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
 
-        {/* Coluna direita - imagem capa */}
-        <View style={styles.rightColumn}>
-          <Image source={capa} style={styles.capaImage} resizeMode="cover" />
-        </View>
+        {/* Coluna imagem (escondida em mobile) */}
+        {!isSmallScreen && (
+          <View style={styles.rightColumn}>
+            <Image source={capa} style={styles.capaImage} resizeMode="cover" />
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -299,7 +351,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     height: 75,
@@ -312,6 +363,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  headerSmall: {
+    paddingHorizontal: 20,
+  },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -321,6 +375,9 @@ const styles = StyleSheet.create({
   logo: {
     width: 110,
     height: 55,
+  },
+  menuButton: {
+    padding: 5,
   },
   rightItems: {
     flexDirection: 'row',
@@ -364,20 +421,56 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#F2E3BB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 200,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2A2D34',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#555',
+    marginLeft: 12,
+  },
   mainContainer: {
     flex: 1,
     flexDirection: 'row',
   },
   leftColumn: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 30,
     backgroundColor: '#FFFFFF',
+  },
+  leftColumnFull: {
   },
   formContainer: {
     width: '100%',
     maxWidth: 400,
+    alignSelf: 'center',
   },
   tituloAcessar: {
     color: '#2A2D34',

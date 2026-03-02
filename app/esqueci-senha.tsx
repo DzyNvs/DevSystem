@@ -3,19 +3,24 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 // Importações do Firebase
+import { Ionicons } from '@expo/vector-icons'; // Adicionado para o ícone do menu
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
-// Imagens do cabeçalho e capa - Caminhos conforme sua estrutura
+// Imagens
 const logo = require('../assets/images/logo.png');
 const vector = require('../assets/images/vector.png');
 const store = require('../assets/images/store.png');
@@ -26,6 +31,10 @@ export default function EsqueciSenha() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false); 
+
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 768;
 
   const handleEnviar = async () => {
     if (!email) {
@@ -70,80 +79,148 @@ export default function EsqueciSenha() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho */}
-      <View style={styles.header}>
+      {/* Cabeçalho com menu hamburger em mobile */}
+      <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
-          <View style={styles.rightItems}>
+          
+          {isSmallScreen ? (
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
+              <Ionicons name="menu" size={30} color="#555" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.rightItems}>
+              <TouchableOpacity
+                style={[
+                  styles.restauranteGroup,
+                  highlightRestaurante && styles.restauranteAtivo,
+                ]}
+                onPress={() => setHighlightRestaurante(!highlightRestaurante)}
+              >
+                <Image source={store} style={styles.storeIcon} resizeMode="contain" />
+                <Text
+                  style={[
+                    styles.restauranteText,
+                    highlightRestaurante && styles.restauranteTextAtivo,
+                  ]}
+                >
+                  Sou restaurante
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.ambienteGroup}>
+                <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
+                <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Menu hamburger */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Opções</Text>
+              <TouchableOpacity onPress={() => setMenuVisible(false)}>
+                <Ionicons name="close" size={30} color="#555" />
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={[
-                styles.restauranteGroup,
+                styles.modalItem,
                 highlightRestaurante && styles.restauranteAtivo,
               ]}
-              onPress={() => setHighlightRestaurante(!highlightRestaurante)}
+              onPress={() => {
+                setHighlightRestaurante(!highlightRestaurante);
+                setMenuVisible(false);
+              }}
             >
               <Image source={store} style={styles.storeIcon} resizeMode="contain" />
               <Text
                 style={[
-                  styles.restauranteText,
+                  styles.modalItemText,
                   highlightRestaurante && styles.restauranteTextAtivo,
                 ]}
               >
                 Sou restaurante
               </Text>
             </TouchableOpacity>
-            <View style={styles.ambienteGroup}>
+
+            <View style={styles.modalItem}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-              <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
+              <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
             </View>
           </View>
         </View>
-      </View>
+      </Modal>
 
-      <View style={styles.mainContainer}>
-        {/* Coluna do formulário */}
-        <View style={styles.leftColumn}>
-          <View style={styles.formContainer}>
-            <Text style={styles.titulo}>Criar uma nova senha</Text>
-            <Text style={styles.subtitulo}>Insira o e-mail cadastrado para continuar</Text>
+      {/* Conteúdo com KeyboardAvoidingView para evitar sobreposição do cabeçalho */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 75}
+      >
+        <View style={styles.mainContainer}>
+          {/* Coluna formulário */}
+          <ScrollView
+            contentContainerStyle={[
+              styles.leftColumn,
+              isSmallScreen && styles.leftColumnFull,
+              { flexGrow: 1, justifyContent: 'center' }
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.formContainer}>
+              <Text style={styles.titulo}>Criar uma nova senha</Text>
+              <Text style={styles.subtitulo}>Insira o e-mail cadastrado para continuar</Text>
 
-            <Text style={styles.label}>E-mail</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Seu e-mail"
-              placeholderTextColor="#A0A0A0"
-            />
+              <Text style={styles.label}>E-mail</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Seu e-mail"
+                placeholderTextColor="#A0A0A0"
+              />
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleEnviar}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Enviar Link de Recuperação</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleEnviar}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Enviar Link de Recuperação</Text>
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.buttonVoltar} 
-              onPress={() => router.replace('/')}
-            >
-              <Text style={styles.buttonVoltarText}>Voltar</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity 
+                style={styles.buttonVoltar} 
+                onPress={() => router.replace('/')}
+              >
+                <Text style={styles.buttonVoltarText}>Voltar</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          {/* Coluna imagem capa (escondida em mobile) */}
+          {!isSmallScreen && (
+            <View style={styles.rightColumn}>
+              <Image source={capa2} style={styles.capaImage} resizeMode="cover" />
+            </View>
+          )}
         </View>
-
-        {/* Coluna imagem */}
-        <View style={styles.rightColumn}>
-          <Image source={capa2} style={styles.capaImage} resizeMode="cover" />
-        </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -152,7 +229,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     height: 75,
@@ -161,6 +237,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 5,
   },
+  headerSmall: {
+    paddingHorizontal: 20,
+  },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -168,6 +247,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logo: { width: 110, height: 55 },
+  menuButton: { padding: 5 },
   rightItems: { flexDirection: 'row', alignItems: 'center', gap: 40 },
   restauranteGroup: {
     flexDirection: 'row',
@@ -183,15 +263,50 @@ const styles = StyleSheet.create({
   ambienteGroup: { flexDirection: 'row', alignItems: 'center' },
   ambienteText: { fontSize: 14, color: '#555', fontWeight: '600', marginLeft: 8 },
   vectorIcon: { width: 22, height: 22 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#F2E3BB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 200,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2A2D34',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#555',
+    marginLeft: 12,
+  },
   mainContainer: { flex: 1, flexDirection: 'row' },
   leftColumn: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 30,
     backgroundColor: '#FFFFFF',
   },
-  formContainer: { width: '100%', maxWidth: 500 },
+  leftColumnFull: {
+  },
+  formContainer: { width: '100%', maxWidth: 500, alignSelf: 'center' },
   titulo: {
     color: '#000',
     textAlign: 'center',
