@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { useLoginController } from '../controllers/useLoginController';
 
-// --- IMPORTAÇÕES PARA O GOOGLE E FACEBOOK ---
 import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
@@ -28,11 +27,9 @@ import {
   signInWithCredential
 } from 'firebase/auth';
 
-// --- IMPORTAÇÕES DO BANCO DE DADOS ---
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Imagens 
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
 const store = require('../../assets/images/store.png');
@@ -40,7 +37,6 @@ const capa = require('../../assets/images/capa.png');
 const google = require('../../assets/images/google.png');
 const facebook = require('../../assets/images/facebook.png');
 
-// Essencial para o navegador fechar após o login
 WebBrowser.maybeCompleteAuthSession();
 
 export function LoginScreen() {
@@ -53,18 +49,15 @@ export function LoginScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 768;
 
-  // --- LÓGICA DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
     prompt: 'select_account',
   });
 
-  // --- LÓGICA DO FACEBOOK ---
   const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
     clientId: '1241106417521930',
   });
 
-  // --- EFEITO GOOGLE: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
@@ -109,7 +102,6 @@ export function LoginScreen() {
     }
   }, [response]);
 
-  // --- EFEITO FACEBOOK: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (fbResponse?.type === 'success') {
       const { access_token } = fbResponse.params;
@@ -158,7 +150,6 @@ export function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho com menu hamburger em mobile */}
       <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -195,7 +186,6 @@ export function LoginScreen() {
         </View>
       </View>
 
-      {/* Menu hamburger */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -240,9 +230,7 @@ export function LoginScreen() {
         </View>
       </Modal>
 
-      {/* Conteúdo principal */}
       <View style={styles.mainContainer}>
-        {/* Coluna formulário */}
         <ScrollView
           contentContainerStyle={[
             styles.leftColumn,
@@ -257,14 +245,14 @@ export function LoginScreen() {
 
             {ctrl.erro ? <Text style={styles.erroTexto}>{ctrl.erro}</Text> : null}
 
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>E-mail ou Telefone</Text>
             <TextInput
               style={styles.input}
-              value={ctrl.email}
-              onChangeText={ctrl.setEmail}
-              keyboardType="email-address"
+              value={ctrl.identificador}
+              onChangeText={ctrl.setIdentificador}
+              keyboardType="default" 
               autoCapitalize="none"
-              placeholder="seu@email.com"
+              placeholder="seu@email.com ou (11) 99999-9999"
               placeholderTextColor="#A0A0A0"
             />
 
@@ -290,9 +278,7 @@ export function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.esqueciSenha}
-              onPress={() => router.push('/esqueci-senha')}>
+            <TouchableOpacity style={styles.esqueciSenha} onPress={() => router.push('/esqueci-senha')}>
               <Text style={styles.esqueciSenhaTexto}>Esqueceu sua senha?</Text>
             </TouchableOpacity>
 
@@ -336,7 +322,6 @@ export function LoginScreen() {
           </View>
         </ScrollView>
 
-        {/* Coluna imagem (escondida em mobile) */}
         {!isSmallScreen && (
           <View style={styles.rightColumn}>
             <Image source={capa} style={styles.capaImage} resizeMode="cover" />

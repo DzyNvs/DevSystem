@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter } from 'expo-router'; // <-- ADICIONADO para navegar após o login
-import React, { useEffect, useState } from 'react'; // <-- useEffect ADICIONADO
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -18,7 +19,6 @@ import {
 } from 'react-native';
 import { useAuthController } from '../controllers/useAuthController';
 
-// --- IMPORTAÇÕES DO FIREBASE E SOCIAL AUTH ---
 import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
@@ -28,42 +28,37 @@ import {
   getAuth,
   signInWithCredential
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore'; // Removido o setDoc pois a gravação é feita na tela de completar
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Imagens
 const logo = require('../../assets/images/logo.png');
 const vector = require('../../assets/images/vector.png');
 const store = require('../../assets/images/store.png');
 const capa3 = require('../../assets/images/capa3.png');
-const googleIcon = require('../../assets/images/google.png'); // Declarado para evitar erro
-const facebookIcon = require('../../assets/images/facebook.png'); // Declarado para evitar erro
+const googleIcon = require('../../assets/images/google.png'); 
+const facebookIcon = require('../../assets/images/facebook.png'); 
 
-// Essencial para o navegador fechar após o login social
 WebBrowser.maybeCompleteAuthSession();
 
 export function CadastroScreen() {
   const ctrl = useAuthController();
-  const router = useRouter(); // <-- ADICIONADO
+  const router = useRouter(); 
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false); 
 
-  const { width } = useWindowDimensions(); // <-- ADICIONADO hook
-  const isSmallScreen = width < 768; // <-- ADICIONADO breakpoint para mobile
+  const { width } = useWindowDimensions(); 
+  const isSmallScreen = width < 768; 
 
-  // --- LÓGICA DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
-    prompt: 'select_account', // <-- Força a tela de escolher a conta do Google
+    prompt: 'select_account',
   });
 
-  // --- LÓGICA DO FACEBOOK ---
   const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
     clientId: '1241106417521930',
   });
 
-  // --- EFEITO GOOGLE: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
@@ -74,19 +69,15 @@ export function CadastroScreen() {
         .then(async (resultado) => {
           const user = resultado.user;
           
-          // 1. Procura primeiro na tabela de Consumidores
           let userRef = doc(db, 'consumidores', user.uid);
           let userSnap = await getDoc(userRef);
 
-          // 2. Se não achar nos consumidores, procura nos Restaurantes
           if (!userSnap.exists()) {
             userRef = doc(db, 'restaurantes', user.uid);
             userSnap = await getDoc(userRef);
           }
 
           if (!userSnap.exists()) {
-            // NÃO ACHOU EM NENHUMA! É UM USUÁRIO 100% NOVO! 
-            // Verifica o botão "Sou Restaurante" para mandar para a tela certa
             const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
 
             router.push({
@@ -98,7 +89,6 @@ export function CadastroScreen() {
               }
             });
           } else {
-            // ACHOU EM ALGUMA DELAS! Lê os dados e manda para a Home certa.
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${user.displayName}! 🥗`);
             
@@ -116,7 +106,6 @@ export function CadastroScreen() {
     }
   }, [response]);
 
-  // --- EFEITO FACEBOOK: PROCURANDO NAS DUAS TABELAS ---
   useEffect(() => {
     if (fbResponse?.type === 'success') {
       const { access_token } = fbResponse.params;
@@ -127,19 +116,15 @@ export function CadastroScreen() {
         .then(async (resultado) => {
           const user = resultado.user;
           
-          // 1. Procura primeiro na tabela de Consumidores
           let userRef = doc(db, 'consumidores', user.uid);
           let userSnap = await getDoc(userRef);
 
-          // 2. Se não achar nos consumidores, procura nos Restaurantes
           if (!userSnap.exists()) {
             userRef = doc(db, 'restaurantes', user.uid);
             userSnap = await getDoc(userRef);
           }
 
           if (!userSnap.exists()) {
-            // NÃO ACHOU EM NENHUMA! É UM USUÁRIO 100% NOVO!
-            // Verifica o botão "Sou Restaurante" para mandar para a tela certa
             const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
 
             router.push({
@@ -151,7 +136,6 @@ export function CadastroScreen() {
               }
             });
           } else {
-            // ACHOU EM ALGUMA DELAS! Lê os dados e manda para a Home certa.
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${user.displayName}! 🥗`);
             
@@ -169,14 +153,10 @@ export function CadastroScreen() {
     }
   }, [fbResponse]);
 
-  // Função para aplicar máscara de data (DD/MM/AAAA)
   const aplicarMascaraData = (texto) => {
-    // Remove tudo que não for número
     const numeros = texto.replace(/\D/g, '');
-    // Limita a 8 dígitos
     const numerosLimitados = numeros.slice(0, 8);
 
-    // Aplica a máscara: DD/MM/AAAA
     let formatado = '';
     for (let i = 0; i < numerosLimitados.length; i++) {
       if (i === 2 || i === 4) {
@@ -192,7 +172,6 @@ export function CadastroScreen() {
     ctrl.setDataNascimento(formatado);
   };
 
-  // Formata data como DD/MM/AAAA a partir de um objeto Date
   const formatarDataParaString = (date) => {
     if (!date) return '';
     const dia = date.getDate().toString().padStart(2, '0');
@@ -201,7 +180,6 @@ export function CadastroScreen() {
     return `${dia}/${mes}/${ano}`;
   };
 
-  // Converte string DD/MM/AAAA para Date
   const converterStringParaDate = (dataStr) => {
     if (!dataStr) return new Date();
     const partes = dataStr.split('/');
@@ -209,12 +187,11 @@ export function CadastroScreen() {
       const dia = parseInt(partes[0], 10);
       const mes = parseInt(partes[1], 10) - 1;
       const ano = parseInt(partes[2], 10);
-      // Valida se a data é válida
       if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
         return new Date(ano, mes, dia);
       }
     }
-    return new Date(); // fallback
+    return new Date(); 
   };
 
   const onDateChange = (event, selectedDate) => {
@@ -224,7 +201,6 @@ export function CadastroScreen() {
     }
   };
 
-  // Alterna entre Consumidor e Restaurante ao clicar em "Sou restaurante"
   const alternarTipo = () => {
     ctrl.setIsRestaurante(!ctrl.isRestaurante);
   };
@@ -233,20 +209,16 @@ export function CadastroScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho com menu hamburger em mobile */}
       <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
           
           {isSmallScreen ? (
-            // Em telas pequenas, mostra o ícone do menu
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
               <Ionicons name="menu" size={30} color="#555" />
             </TouchableOpacity>
           ) : (
-            // Em telas grandes, mostra os itens normalmente
             <View style={styles.rightItems}>
-              {/* Grupo "Sou restaurante" clicável com cor de fundo quando ativo */}
               <TouchableOpacity
                 style={[
                   styles.restauranteGroup,
@@ -264,7 +236,6 @@ export function CadastroScreen() {
                   Sou restaurante
                 </Text>
               </TouchableOpacity>
-              {/* Grupo "Ambiente 100% seguro" estático */}
               <View style={styles.ambienteGroup}>
                 <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
                 <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
@@ -274,7 +245,6 @@ export function CadastroScreen() {
         </View>
       </View>
 
-      {/* Menu hamburger */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -290,7 +260,6 @@ export function CadastroScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Item "Sou restaurante" clicável */}
             <TouchableOpacity
               style={[
                 styles.modalItem,
@@ -312,7 +281,6 @@ export function CadastroScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Item "Ambiente 100% seguro" informativo */}
             <View style={styles.modalItem}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
               <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
@@ -321,9 +289,7 @@ export function CadastroScreen() {
         </View>
       </Modal>
 
-      {/* Conteúdo principal */}
       <View style={styles.mainContainer}>
-        {/* Coluna formulário */}
         <View style={styles.leftColumn}>
           <ScrollView
             contentContainerStyle={styles.scrollContainer}
@@ -335,15 +301,14 @@ export function CadastroScreen() {
 
               {ctrl.erro ? <Text style={styles.erroTexto}>{ctrl.erro}</Text> : null}
 
-              {/* Campos dinâmicos conforme o tipo */}
               {!ctrl.isRestaurante ? (
-                // Modo Consumidor
                 <>
                   <Text style={styles.label}>Nome completo</Text>
                   <TextInput
                     style={styles.input}
                     value={ctrl.nome}
-                    onChangeText={ctrl.setNome}
+                    onChangeText={ctrl.handleNomeChange}
+                    maxLength={100}
                     placeholder="Nome completo"
                     placeholderTextColor="#A0A0A0"
                   />
@@ -353,6 +318,7 @@ export function CadastroScreen() {
                     style={styles.input}
                     value={ctrl.email}
                     onChangeText={ctrl.setEmail}
+                    maxLength={100}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholder="E-mail"
@@ -363,7 +329,8 @@ export function CadastroScreen() {
                   <TextInput
                     style={styles.input}
                     value={ctrl.cpf}
-                    onChangeText={ctrl.setCpf}
+                    onChangeText={ctrl.handleCpfChange}
+                    maxLength={14}
                     keyboardType="numeric"
                     placeholder="CPF"
                     placeholderTextColor="#A0A0A0"
@@ -375,7 +342,8 @@ export function CadastroScreen() {
                       <TextInput
                         style={styles.input}
                         value={ctrl.telefone}
-                        onChangeText={ctrl.setTelefone}
+                        onChangeText={ctrl.handleTelefoneChange}
+                        maxLength={20}
                         keyboardType="phone-pad"
                         placeholder="Telefone"
                         placeholderTextColor="#A0A0A0"
@@ -383,7 +351,6 @@ export function CadastroScreen() {
                     </View>
                     <View style={styles.halfColumn}>
                       <Text style={styles.label}>Data de nascimento</Text>
-                      {/* Campo com input e ícone de calendário */}
                       <View style={styles.dateInputContainer}>
                         <TextInput
                           style={styles.dateInputText}
@@ -392,11 +359,12 @@ export function CadastroScreen() {
                           placeholder="DD/MM/AAAA"
                           placeholderTextColor="#A0A0A0"
                           keyboardType="numeric"
-                          maxLength={10} // DD/MM/AAAA 
+                          maxLength={10} 
                         />
                         <TouchableOpacity
                           onPress={() => setShowDatePicker(true)}
                           style={styles.dateIcon}
+                          activeOpacity={0.6}
                         >
                           <Ionicons name="calendar-outline" size={22} color="#93BD57" />
                         </TouchableOpacity>
@@ -427,13 +395,13 @@ export function CadastroScreen() {
                   </View>
                 </>
               ) : (
-                // Modo Restaurante
                 <>
                   <Text style={styles.label}>Nome Fantasia</Text>
                   <TextInput
                     style={styles.input}
                     value={ctrl.nomeFantasia}
                     onChangeText={ctrl.setNomeFantasia}
+                    maxLength={100}
                     placeholder="Nome Fantasia"
                     placeholderTextColor="#A0A0A0"
                   />
@@ -443,6 +411,7 @@ export function CadastroScreen() {
                     style={styles.input}
                     value={ctrl.razaoSocial}
                     onChangeText={ctrl.setRazaoSocial}
+                    maxLength={100}
                     placeholder="Razão Social"
                     placeholderTextColor="#A0A0A0"
                   />
@@ -451,7 +420,8 @@ export function CadastroScreen() {
                   <TextInput
                     style={styles.input}
                     value={ctrl.cnpj}
-                    onChangeText={ctrl.setCnpj}
+                    onChangeText={ctrl.handleCnpjChange}
+                    maxLength={18}
                     keyboardType="numeric"
                     placeholder="CNPJ"
                     placeholderTextColor="#A0A0A0"
@@ -462,6 +432,7 @@ export function CadastroScreen() {
                     style={styles.input}
                     value={ctrl.email}
                     onChangeText={ctrl.setEmail}
+                    maxLength={100}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholder="E-mail"
@@ -492,7 +463,6 @@ export function CadastroScreen() {
                 </>
               )}
 
-              {/* Botão Cadastrar */}
               {ctrl.carregando ? (
                 <ActivityIndicator size="large" color="#93BD57" style={styles.loader} />
               ) : (
@@ -501,14 +471,12 @@ export function CadastroScreen() {
                 </TouchableOpacity>
               )}
 
-              {/* Divisor OU */}
               <View style={styles.divisorContainer}>
                 <View style={styles.linhaDivisor} />
                 <Text style={styles.textoDivisor}>OU</Text>
                 <View style={styles.linhaDivisor} />
               </View>
 
-              {/* Botões sociais (ADICIONADO OS EVENTOS onPress E disabled) */}
               <TouchableOpacity
                 style={styles.botaoSocialGoogle}
                 onPress={() => promptAsync()}
@@ -527,7 +495,6 @@ export function CadastroScreen() {
                 <Text style={styles.textoSocialFacebook}>Continuar com Facebook</Text>
               </TouchableOpacity>
 
-              {/* Link para login */}
               <TouchableOpacity onPress={ctrl.irParaLogin} style={styles.linkLoginContainer}>
                 <Text style={styles.textoLinkLogin}>
                   Já tem uma conta? <Text style={styles.textoLinkLoginBold}>Fazer login</Text>
@@ -537,7 +504,6 @@ export function CadastroScreen() {
           </ScrollView>
         </View>
 
-        {/* Coluna imagem - escondida em mobile */}
         {!isSmallScreen && (
           <View style={styles.rightColumn}>
             <Image source={capa3} style={styles.capaImage} resizeMode="cover" />
@@ -545,8 +511,7 @@ export function CadastroScreen() {
         )}
       </View>
 
-      {/* DatePicker */}
-      {showDatePicker && (
+      {Platform.OS !== 'web' && showDatePicker && (
         <DateTimePicker
           value={converterStringParaDate(ctrl.dataNascimento)}
           mode="date"

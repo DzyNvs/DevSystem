@@ -1,45 +1,46 @@
+import { Ionicons } from '@expo/vector-icons'; // <-- ADICIONADO: Importação do ícone
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { db } from '../src/config/firebase'; // O mesmo caminho do banco
+import { db } from '../src/config/firebase';
 
 export default function CompletarCadastroRestauranteScreen() {
   const router = useRouter();
-  // Resgatando os dados invisíveis que vieram do Google/Facebook
   const { uid, nome, email } = useLocalSearchParams(); 
 
-  // Já deixamos o "nome" do Google como sugestão para o Nome Fantasia, mas ele pode apagar e mudar
   const [nomeFantasia, setNomeFantasia] = useState(nome || '');
   const [razaoSocial, setRazaoSocial] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [telefone, setTelefone] = useState(''); 
   const [carregando, setCarregando] = useState(false);
 
-  // Máscara inteligente para CNPJ (00.000.000/0000-00)
   const aplicarMascaraCNPJ = (texto) => {
-    // Remove tudo que não é número e limita a 14 dígitos
-    let limpo = texto.replace(/\D/g, '').slice(0, 14);
-    let formatado = limpo;
-    
-    if (limpo.length > 12) {
-      formatado = limpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, '$1.$2.$3/$4-$5');
-    } else if (limpo.length > 8) {
-      formatado = limpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4}).*/, '$1.$2.$3/$4');
-    } else if (limpo.length > 5) {
-      formatado = limpo.replace(/^(\d{2})(\d{3})(\d{1,3}).*/, '$1.$2.$3');
-    } else if (limpo.length > 2) {
-      formatado = limpo.replace(/^(\d{2})(\d{1,3}).*/, '$1.$2');
-    }
+    let formatado = texto.replace(/\D/g, ''); 
+    if (formatado.length > 14) formatado = formatado.slice(0, 14);
+
+    formatado = formatado.replace(/^(\d{2})(\d)/, '$1.$2');
+    formatado = formatado.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+    formatado = formatado.replace(/\.(\d{3})(\d)/, '.$1/$2');
+    formatado = formatado.replace(/(\d{4})(\d)/, '$1-$2');
     setCnpj(formatado);
+  };
+
+  const handleTelefoneChange = (texto) => {
+    let formatado = texto.replace(/\D/g, ''); 
+    if (formatado.length > 11) formatado = formatado.slice(0, 11);
+
+    formatado = formatado.replace(/^(\d{2})(\d)/g, '($1) $2');
+    formatado = formatado.replace(/(\d{5})(\d)/, '$1-$2');
+    setTelefone(formatado);
   };
 
   const handleFinalizar = async () => {
@@ -51,20 +52,17 @@ export default function CompletarCadastroRestauranteScreen() {
     setCarregando(true);
 
     try {
-      // Gravando a ficha do Restaurante!
       await setDoc(doc(db, 'restaurantes', uid), {
         nomeFantasia: nomeFantasia,
         razaoSocial: razaoSocial,
         email: email,
         cnpj: cnpj,
         telefone: telefone, 
-        tipoConta: 'restaurante', // <-- O SEGREDO ESTÁ AQUI: Definimos como restaurante!
+        tipoConta: 'restaurante', 
         dataCriacao: new Date()
       });
 
       alert("Restaurante parceiro cadastrado com sucesso! 🥗");
-      
-      // Manda direto para a tela de Home do Restaurante
       router.replace('/home-restaurante-screen'); 
       
     } catch (error) {
@@ -78,6 +76,12 @@ export default function CompletarCadastroRestauranteScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        {/* --- NOVO: BOTÃO DE VOLTAR --- */}
+        <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Text style={styles.textoVoltar}>Voltar</Text>
+        </TouchableOpacity>
+
         <Text style={styles.titulo}>Seja nosso Parceiro!</Text>
         <Text style={styles.subtitulo}>
           Precisamos dos dados da sua empresa para finalizar o cadastro no FitWay.
@@ -90,6 +94,7 @@ export default function CompletarCadastroRestauranteScreen() {
           onChangeText={setNomeFantasia}
           placeholder="Nome do seu restaurante"
           placeholderTextColor="#A0A0A0"
+          maxLength={100} 
         />
 
         <Text style={styles.label}>Razão Social</Text>
@@ -99,6 +104,7 @@ export default function CompletarCadastroRestauranteScreen() {
           onChangeText={setRazaoSocial}
           placeholder="Razão Social da empresa"
           placeholderTextColor="#A0A0A0"
+          maxLength={100} 
         />
 
         <Text style={styles.label}>CNPJ</Text>
@@ -109,17 +115,18 @@ export default function CompletarCadastroRestauranteScreen() {
           keyboardType="numeric"
           placeholder="00.000.000/0000-00"
           placeholderTextColor="#A0A0A0"
-          maxLength={18}
+          maxLength={18} 
         />
 
         <Text style={styles.label}>Telefone de Contato</Text>
         <TextInput
           style={styles.input}
           value={telefone}
-          onChangeText={setTelefone}
+          onChangeText={handleTelefoneChange} 
           keyboardType="phone-pad"
           placeholder="(00) 00000-0000"
           placeholderTextColor="#A0A0A0"
+          maxLength={15} 
         />
 
         {carregando ? (
@@ -137,6 +144,10 @@ export default function CompletarCadastroRestauranteScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   container: { flex: 1, padding: 30, justifyContent: 'center', maxWidth: 500, alignSelf: 'center', width: '100%' },
+  /* --- ESTILOS DO BOTÃO VOLTAR --- */
+  botaoVoltar: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 20 },
+  textoVoltar: { fontSize: 16, color: '#333', marginLeft: 8, fontWeight: '600' },
+  /* ------------------------------- */
   titulo: { fontSize: 32, fontWeight: 'bold', color: '#93BD57', marginBottom: 10, textAlign: 'center' },
   subtitulo: { fontSize: 16, color: '#666', marginBottom: 30, textAlign: 'center' },
   label: { fontSize: 15, fontWeight: '600', marginBottom: 6, color: '#333' },
