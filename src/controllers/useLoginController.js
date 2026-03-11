@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+// Adicionamos doc e getDoc aqui:
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { db } from '../config/firebase';
+// Adicionamos o auth aqui:
+import { auth, db } from '../config/firebase';
 import { LoginModel } from '../models/LoginModel';
 
 export const useLoginController = () => {
@@ -46,10 +48,35 @@ export const useLoginController = () => {
         emailParaLogin = docUsuario.email; 
       }
 
+      // Faz o login nativo
       const resultado = await LoginModel.entrar(emailParaLogin, senha);
       
       if (resultado.tipo === 'restaurante') {
-        router.replace('/home-restaurante-screen');
+        
+        // 👇 A MÁGICA ACONTECE AQUI 👇
+        // Vamos no banco garantir que puxamos os dados fresquinhos do Firebase
+        const userUid = auth.currentUser?.uid || resultado.uid; 
+        
+        if (userUid) {
+          const docRef = doc(db, 'restaurantes', userUid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const dadosRestaurante = docSnap.data();
+            
+            // Verifica a nossa flag ou se a rua existe
+            if (dadosRestaurante.onboardingConcluido || (dadosRestaurante.endereco && dadosRestaurante.endereco.rua)) {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/onboarding-restaurante');
+            }
+          } else {
+            router.replace('/onboarding-restaurante');
+          }
+        } else {
+          router.replace('/onboarding-restaurante');
+        }
+
       } else {
         router.replace('/home-consumidor-screen');
       }

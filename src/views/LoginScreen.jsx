@@ -58,6 +58,7 @@ export function LoginScreen() {
     clientId: '1241106417521930',
   });
 
+  // --- LOGIN COM GOOGLE ---
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
@@ -80,8 +81,13 @@ export function LoginScreen() {
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
 
+            // NOVA REGRA AQUI (GOOGLE)
             if (dadosUsuario.tipoConta === 'restaurante') {
-              router.replace('/home-restaurante-screen');
+              if (dadosUsuario.onboardingConcluido || (dadosUsuario.endereco && dadosUsuario.endereco.rua)) {
+                router.replace('/home-restaurante-screen');
+              } else {
+                router.replace('/onboarding-restaurante');
+              }
             } else {
               router.replace('/home-consumidor-screen');
             }
@@ -102,6 +108,7 @@ export function LoginScreen() {
     }
   }, [response]);
 
+  // --- LOGIN COM FACEBOOK ---
   useEffect(() => {
     if (fbResponse?.type === 'success') {
       const { access_token } = fbResponse.params;
@@ -124,8 +131,13 @@ export function LoginScreen() {
             const dadosUsuario = userSnap.data();
             alert(`Bem-vindo de volta, ${resultado.user.displayName}! 🥗`);
 
+            // NOVA REGRA AQUI (FACEBOOK)
             if (dadosUsuario.tipoConta === 'restaurante') {
-              router.replace('/home-restaurante-screen');
+              if (dadosUsuario.onboardingConcluido || (dadosUsuario.endereco && dadosUsuario.endereco.rua)) {
+                router.replace('/home-restaurante-screen');
+              } else {
+                router.replace('/onboarding-restaurante');
+              }
             } else {
               router.replace('/home-consumidor-screen');
             }
