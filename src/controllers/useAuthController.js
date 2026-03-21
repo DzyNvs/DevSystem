@@ -122,6 +122,6 @@ export const useAuthController = () => {
     email, setEmail, senha, setSenha,
     nome, handleNomeChange, cpf, handleCpfChange, telefone, handleTelefoneChange, dataNascimento, setDataNascimento,
     nomeFantasia, setNomeFantasia, razaoSocial, setRazaoSocial, cnpj, handleCnpjChange,
-    handleCadastro, carregando, erro, irParaLogin 
+    handleCadastro, carregando, erro, setErro, irParaLogin // <-- O 'setErro' foi adicionado aqui!
   };
 };
