@@ -27,6 +27,7 @@ export const AuthModel = {
       cpf: dados.cpf,
       telefone: dados.telefone,
       data_nascimento: dados.dataNascimento,
+      id_consumidor: dados.id_consumidor, // Código único do consumidor
       data_criacao: new Date()
     });
 
@@ -56,6 +57,7 @@ export const AuthModel = {
       razao_social: dados.razaoSocial,
       cnpj: dados.cnpj,
       email_rest: dados.email,
+      id_restaurante: dados.id_restaurante, // Código único do restaurante
       data_criacao: new Date()
     });
 

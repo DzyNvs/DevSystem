@@ -18,13 +18,15 @@ export const LoginModel = {
     // 2. Procura na coleção de Restaurantes para ver se ele é restaurante
     const restDoc = await getDoc(doc(db, "restaurantes", user.uid));
     if (restDoc.exists()) {
-      return { user, tipo: 'restaurante' };
+      // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM
+      return { user, tipo: 'restaurante', dados: restDoc.data() }; 
     }
 
     // 3. Procura na coleção de Consumidores para ver se ele é consumidor
     const consDoc = await getDoc(doc(db, "consumidores", user.uid));
     if (consDoc.exists()) {
-      return { user, tipo: 'consumidor' };
+      // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM
+      return { user, tipo: 'consumidor', dados: consDoc.data() };
     }
 
     // Se logar mas não tiver documento (erro de banco), avisa:

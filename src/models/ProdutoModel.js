@@ -1,12 +1,13 @@
 import { collection, addDoc, doc, query, where, getDocs, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+
 export const ProdutoModel = {
   
   async cadastrar(dadosPrato, imagemBase64) { 
     try {
-      const restauranteRef = doc(db, 'restaurantes', dadosPrato.id_restaurante);
+      // Salva o id_restaurante como texto direto, facilitando as buscas depois
       const docRef = await addDoc(collection(db, 'produtos'), {
-        id_restaurante: restauranteRef, 
+        id_restaurante: dadosPrato.id_restaurante, 
         nome: dadosPrato.nome,
         descricao: dadosPrato.descricao || "", 
         preco: dadosPrato.preco,
@@ -22,11 +23,10 @@ export const ProdutoModel = {
     }
   },
 
-  
   async buscarPorRestaurante(idRestaurante) {
     try {
-      const restauranteRef = doc(db, 'restaurantes', idRestaurante);
-      const q = query(collection(db, 'produtos'), where('id_restaurante', '==', restauranteRef));
+      // Busca usando a string do ID
+      const q = query(collection(db, 'produtos'), where('id_restaurante', '==', idRestaurante));
       const snapshot = await getDocs(q);
       
       const produtos = [];
@@ -41,7 +41,6 @@ export const ProdutoModel = {
     }
   },
 
-  
   async deletar(idProduto) {
     try {
       const produtoRef = doc(db, 'produtos', idProduto);
@@ -51,7 +50,6 @@ export const ProdutoModel = {
       throw error;
     }
   },
-
 
   async buscarPorId(idProduto) {
     try {
@@ -67,7 +65,6 @@ export const ProdutoModel = {
     }
   },
 
- 
   async atualizar(idProduto, dadosAtualizados) {
     try {
       const produtoRef = doc(db, 'produtos', idProduto);
@@ -83,6 +80,4 @@ export const ProdutoModel = {
       throw error;
     }
   }
-
-  
 };

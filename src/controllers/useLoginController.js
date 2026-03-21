@@ -1,9 +1,7 @@
 import { router } from 'expo-router';
-// Adicionamos doc e getDoc aqui:
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-// Adicionamos o auth aqui:
 import { auth, db } from '../config/firebase';
 import { LoginModel } from '../models/LoginModel';
 
@@ -25,6 +23,7 @@ export const useLoginController = () => {
     try {
       let emailParaLogin = identificador.trim();
 
+      // Verifica se logou por telefone
       if (!emailParaLogin.includes('@')) {
         let telefoneBusca = emailParaLogin;
         const apenasNumeros = emailParaLogin.replace(/\D/g, '');
@@ -48,36 +47,25 @@ export const useLoginController = () => {
         emailParaLogin = docUsuario.email; 
       }
 
-      // Faz o login nativo
+      // 1. Faz o login nativo chamando o Model
       const resultado = await LoginModel.entrar(emailParaLogin, senha);
+      
+      // 👉 2. AQUI ESTÃO TODAS AS INFORMAÇÕES DO USUÁRIO LOGADO!
+      const dadosUsuario = resultado.dados;
       
       if (resultado.tipo === 'restaurante') {
         
-        // 👇 A MÁGICA ACONTECE AQUI 👇
-        // Vamos no banco garantir que puxamos os dados fresquinhos do Firebase
-        const userUid = auth.currentUser?.uid || resultado.uid; 
-        
-        if (userUid) {
-          const docRef = doc(db, 'restaurantes', userUid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const dadosRestaurante = docSnap.data();
-            
-            // Verifica a nossa flag ou se a rua existe
-            if (dadosRestaurante.onboardingConcluido || (dadosRestaurante.endereco && dadosRestaurante.endereco.rua)) {
-              router.replace('/home-restaurante-screen');
-            } else {
-              router.replace('/onboarding-restaurante');
-            }
-          } else {
-            router.replace('/onboarding-restaurante');
-          }
+        // Verifica a nossa flag ou se a rua existe usando os dados puxados no Model
+        if (dadosUsuario.onboardingConcluido || (dadosUsuario.endereco && dadosUsuario.endereco.rua)) {
+          // Se precisar enviar o ID para a próxima tela, pode usar: router.replace({ pathname: '/home-restaurante-screen', params: { id: dadosUsuario.id_restaurante } })
+          router.replace('/home-restaurante-screen');
         } else {
           router.replace('/onboarding-restaurante');
         }
 
       } else {
+        // É Consumidor
+        console.log("Informações do Consumidor Logado:", dadosUsuario);
         router.replace('/home-consumidor-screen');
       }
       

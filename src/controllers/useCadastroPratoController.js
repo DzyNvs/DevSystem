@@ -2,6 +2,8 @@ import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { ProdutoModel } from '../models/ProdutoModel';
 import { Platform } from 'react-native';
+import { auth, db } from '../config/firebase'; // 👉 Importamos o auth e db
+import { doc, getDoc } from 'firebase/firestore'; // 👉 Importamos o doc e getDoc
 
 export const useCadastroPratoController = () => {
   const [nome, setNome] = useState('');
@@ -43,10 +45,25 @@ export const useCadastroPratoController = () => {
 
     setSalvando(true);
     try {
-      const idRestauranteAtual = "rest_01"; 
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Você precisa estar logado para cadastrar um prato.");
+        return;
+      }
+
+      // Vai no banco buscar o id_restaurante deste usuário
+      const docRef = doc(db, 'restaurantes', user.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists() || !docSnap.data().id_restaurante) {
+        alert("Erro: ID do restaurante não encontrado no sistema.");
+        return;
+      }
+
+      const idRestauranteAtual = docSnap.data().id_restaurante;
 
       const novoPrato = {
-        id_restaurante: idRestauranteAtual,
+        id_restaurante: idRestauranteAtual, // 👉 Usa o ID real que veio do banco
         nome,
         descricao,
         preco: parseFloat(preco.replace(',', '.')), 

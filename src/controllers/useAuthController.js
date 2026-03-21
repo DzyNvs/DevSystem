@@ -68,7 +68,14 @@ export const useAuthController = () => {
     try {
       if (isRestaurante) {
         if (!cnpj) throw new Error("CNPJ_VAZIO");
-        await AuthModel.registrarRestaurante({ email, senha, nomeFantasia, razaoSocial, cnpj });
+
+        // Gera ID para Restaurante
+        const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+        const id_restaurante = `rest_${numeroAleatorio}`;
+
+        await AuthModel.registrarRestaurante({ 
+          email, senha, nomeFantasia, razaoSocial, cnpj, id_restaurante 
+        });
       } else {
         if (!cpf) throw new Error("CPF_VAZIO");
         if (!telefone) throw new Error("TELEFONE_VAZIO");
@@ -79,7 +86,13 @@ export const useAuthController = () => {
           throw new Error("TELEFONE_JA_CADASTRADO");
         }
 
-        await AuthModel.registrarConsumidor({ email, senha, nome, cpf, telefone, dataNascimento });
+        // Gera ID para Consumidor
+        const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+        const id_consumidor = `cons_${numeroAleatorio}`;
+
+        await AuthModel.registrarConsumidor({ 
+          email, senha, nome, cpf, telefone, dataNascimento, id_consumidor 
+        });
       }
 
       const mensagem = "Enviamos um link de verificação. Acesse sua caixa de entrada antes de fazer o login.";
