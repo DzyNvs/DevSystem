@@ -1,9 +1,9 @@
-import React from 'react'; // Removido o useState daqui, o Controller cuida disso agora
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ImageBackground, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react'; // Removido o useState daqui, o Controller cuida disso agora
+import { ActivityIndicator, FlatList, ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useHomeController } from '../controllers/useHomeController';
 import { HeaderConsumidor } from './HeaderConsumidor';
 import { RestauranteCard } from './RestauranteCard';
-import { useHomeController } from '../controllers/useHomeController';
 
 export function HomeConsumidorScreen() {
   const ctrl = useHomeController();
