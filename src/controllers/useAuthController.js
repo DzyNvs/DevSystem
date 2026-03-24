@@ -9,14 +9,11 @@ export const useAuthController = () => {
   const [isRestaurante, setIsRestaurante] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
-
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
-  
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [razaoSocial, setRazaoSocial] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -27,9 +24,8 @@ export const useAuthController = () => {
   };
 
   const handleCpfChange = (texto) => {
-    let formatado = texto.replace(/\D/g, ''); 
+    let formatado = texto.replace(/\D/g, '');
     if (formatado.length > 11) formatado = formatado.slice(0, 11);
-    
     formatado = formatado.replace(/(\d{3})(\d)/, '$1.$2');
     formatado = formatado.replace(/(\d{3})(\d)/, '$1.$2');
     formatado = formatado.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -37,18 +33,16 @@ export const useAuthController = () => {
   };
 
   const handleTelefoneChange = (texto) => {
-    let formatado = texto.replace(/\D/g, ''); 
+    let formatado = texto.replace(/\D/g, '');
     if (formatado.length > 11) formatado = formatado.slice(0, 11);
-
     formatado = formatado.replace(/^(\d{2})(\d)/g, '($1) $2');
     formatado = formatado.replace(/(\d{5})(\d)/, '$1-$2');
     setTelefone(formatado);
   };
 
   const handleCnpjChange = (texto) => {
-    let formatado = texto.replace(/\D/g, ''); 
+    let formatado = texto.replace(/\D/g, '');
     if (formatado.length > 14) formatado = formatado.slice(0, 14);
-
     formatado = formatado.replace(/^(\d{2})(\d)/, '$1.$2');
     formatado = formatado.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
     formatado = formatado.replace(/\.(\d{3})(\d)/, '.$1/$2');
@@ -57,24 +51,23 @@ export const useAuthController = () => {
   };
 
   const handleCadastro = async () => {
-    if (!email || !senha) {
-      setErro("E-mail e senha são obrigatórios!");
+    if (!email) {
+      setErro("E-mail é obrigatório!");
       return;
     }
 
     setCarregando(true);
     setErro('');
-    
+
     try {
       if (isRestaurante) {
         if (!cnpj) throw new Error("CNPJ_VAZIO");
 
-        // Gera ID para Restaurante
         const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
         const id_restaurante = `rest_${numeroAleatorio}`;
 
-        await AuthModel.registrarRestaurante({ 
-          email, senha, nomeFantasia, razaoSocial, cnpj, id_restaurante 
+        await AuthModel.registrarRestaurante({
+          email, nomeFantasia, razaoSocial, cnpj, id_restaurante
         });
       } else {
         if (!cpf) throw new Error("CPF_VAZIO");
@@ -86,26 +79,24 @@ export const useAuthController = () => {
           throw new Error("TELEFONE_JA_CADASTRADO");
         }
 
-        // Gera ID para Consumidor
         const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
         const id_consumidor = `cons_${numeroAleatorio}`;
 
-        await AuthModel.registrarConsumidor({ 
-          email, senha, nome, cpf, telefone, dataNascimento, id_consumidor 
+        await AuthModel.registrarConsumidor({
+          email, nome, cpf, telefone, dataNascimento, id_consumidor
         });
       }
 
       const mensagem = "Enviamos um link de verificação. Acesse sua caixa de entrada antes de fazer o login.";
-      
+
       if (Platform.OS === 'web') {
-        window.alert(mensagem); 
-        router.back(); 
+        window.alert(mensagem);
+        router.back();
       } else {
         Alert.alert("Verifique seu e-mail", mensagem, [
           { text: "OK", onPress: () => router.back() }
         ]);
       }
-      
     } catch (error) {
       console.log("Erro capturado:", error);
       let mensagemErro = "Ocorreu um erro ao realizar o cadastro.";
@@ -118,7 +109,6 @@ export const useAuthController = () => {
       else if (error.message === "CNPJ_VAZIO") mensagemErro = "Por favor, preencha o campo de CNPJ.";
       else if (error.code === "auth/email-already-in-use") mensagemErro = "Este e-mail já está em uso por outra conta.";
       else if (error.code === "auth/invalid-email") mensagemErro = "O e-mail digitado não é válido.";
-      else if (error.code === "auth/weak-password") mensagemErro = "A senha é muito fraca. Digite pelo menos 6 caracteres.";
 
       setErro(mensagemErro);
     } finally {
@@ -127,14 +117,14 @@ export const useAuthController = () => {
   };
 
   const irParaLogin = () => {
-    router.back(); 
+    router.back();
   };
 
   return {
     isRestaurante, setIsRestaurante,
-    email, setEmail, senha, setSenha,
+    email, setEmail,
     nome, handleNomeChange, cpf, handleCpfChange, telefone, handleTelefoneChange, dataNascimento, setDataNascimento,
     nomeFantasia, setNomeFantasia, razaoSocial, setRazaoSocial, cnpj, handleCnpjChange,
-    handleCadastro, carregando, erro, irParaLogin 
+    handleCadastro, carregando, erro, setErro, irParaLogin
   };
 };

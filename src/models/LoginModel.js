@@ -1,28 +1,52 @@
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { API_URL } from '../config/api'; // <-- Puxando o IP dinâmico para conversar com o Node
 import { auth, db } from '../config/firebase';
 
 export const LoginModel = {
-  entrar: async (email, senha) => {
-    // 1. Tenta logar no Auth
-    const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+  // 1. Pede pro backend enviar o código pro e-mail
+  solicitarCodigoLogin: async (email) => {
+    const res = await fetch(`${API_URL}/enviar-codigo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.erro || "Erro ao solicitar código.");
+    }
+    
+    return true;
+  },
+
+  // 2. Envia o código digitado e faz o Login com o Token (Passe VIP)
+  validarCodigoELogar: async (email, codigo) => {
+    const res = await fetch(`${API_URL}/verificar-codigo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, codigo })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.erro || "Código inválido.");
+    }
+
+    // A MÁGICA: Faz o login nativo no Firebase usando o Custom Token recebido do backend!
+    const userCredential = await signInWithCustomToken(auth, data.token);
     const user = userCredential.user;
 
-    // --- NOVA TRAVA DE SEGURANÇA: VERIFICAÇÃO DE E-MAIL ---
-    if (!user.emailVerified) {
-      await signOut(auth); // Desloga imediatamente para não manter sessão ativa
-      throw new Error("EMAIL_NAO_VERIFICADO"); // Lança o erro para o Controller capturar
-    }
-    // ------------------------------------------------------
-
-    // 2. Procura na coleção de Restaurantes para ver se ele é restaurante
+    // Procura na coleção de Restaurantes para ver se ele é restaurante
     const restDoc = await getDoc(doc(db, "restaurantes", user.uid));
     if (restDoc.exists()) {
       // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM
       return { user, tipo: 'restaurante', dados: restDoc.data() }; 
     }
 
-    // 3. Procura na coleção de Consumidores para ver se ele é consumidor
+    // Procura na coleção de Consumidores para ver se ele é consumidor
     const consDoc = await getDoc(doc(db, "consumidores", user.uid));
     if (consDoc.exists()) {
       // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM

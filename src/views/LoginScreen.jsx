@@ -42,14 +42,16 @@ WebBrowser.maybeCompleteAuthSession();
 export function LoginScreen() {
   const ctrl = useLoginController();
   const router = useRouter();
-  const [mostrarSenha, setMostrarSenha] = useState(false);
+  
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 768;
 
+  // --- AQUI ESTÁ A ALTERAÇÃO DO GOOGLE ---
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
     clientId: '613129940263-4fru73eq4rs6coio3ano7gao3nn96ave.apps.googleusercontent.com',
     prompt: 'select_account',
   });
@@ -253,84 +255,96 @@ export function LoginScreen() {
         >
           <View style={styles.formContainer}>
             <Text style={styles.tituloAcessar}>Acessar conta</Text>
-            <Text style={styles.subtitulo}>Entre com seus dados para entrar em sua conta</Text>
+            
+            {/* --- TEXTOS DINÂMICOS BASEADOS NA ETAPA --- */}
+            {ctrl.etapa === 'email' ? (
+              <Text style={styles.subtitulo}>Entre com seu e-mail ou telefone para receber um código de acesso seguro</Text>
+            ) : (
+              <Text style={styles.subtitulo}>Insira o código de 6 dígitos que enviamos para o seu e-mail</Text>
+            )}
 
             {ctrl.erro ? <Text style={styles.erroTexto}>{ctrl.erro}</Text> : null}
 
-            <Text style={styles.label}>E-mail ou Telefone</Text>
-            <TextInput
-              style={styles.input}
-              value={ctrl.identificador}
-              onChangeText={ctrl.setIdentificador}
-              keyboardType="default" 
-              autoCapitalize="none"
-              placeholder="seu@email.com ou (11) 99999-9999"
-              placeholderTextColor="#A0A0A0"
-            />
-
-            <Text style={styles.label}>Senha</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.inputPassword}
-                value={ctrl.senha}
-                onChangeText={ctrl.setSenha}
-                secureTextEntry={!mostrarSenha}
-                placeholder="••••••••"
-                placeholderTextColor="#A0A0A0"
-              />
-              <TouchableOpacity
-                onPress={() => setMostrarSenha(!mostrarSenha)}
-                style={styles.eyeIconContainer}
-              >
-                <Ionicons
-                  name={mostrarSenha ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color="#93BD57"
+            {/* --- FORMULÁRIO DINÂMICO --- */}
+            {ctrl.etapa === 'email' ? (
+              <>
+                <Text style={styles.label}>E-mail ou Telefone</Text>
+                <TextInput
+                  style={styles.input}
+                  value={ctrl.identificador}
+                  onChangeText={ctrl.setIdentificador}
+                  keyboardType="default" 
+                  autoCapitalize="none"
+                  placeholder="seu@email.com ou (11) 99999-9999"
+                  placeholderTextColor="#A0A0A0"
                 />
-              </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity style={styles.esqueciSenha} onPress={() => router.push('/esqueci-senha')}>
-              <Text style={styles.esqueciSenhaTexto}>Esqueceu sua senha?</Text>
-            </TouchableOpacity>
+                {ctrl.carregando ? (
+                  <ActivityIndicator size="large" color="#93BD57" style={styles.loader} />
+                ) : (
+                  <TouchableOpacity style={styles.botaoEntrar} onPress={ctrl.handleSolicitarCodigo}>
+                    <Text style={styles.textoBotaoEntrar}>Receber Código de Acesso</Text>
+                  </TouchableOpacity>
+                )}
 
-            {ctrl.carregando ? (
-              <ActivityIndicator size="large" color="#93BD57" style={styles.loader} />
+                <View style={styles.divisorContainer}>
+                  <View style={styles.linhaDivisor} />
+                  <Text style={styles.textoDivisor}>OU</Text>
+                  <View style={styles.linhaDivisor} />
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.botaoSocialGoogle} 
+                  onPress={() => promptAsync()}
+                  disabled={!request}
+                >
+                  <Image source={google} style={styles.socialIcon} resizeMode="contain" />
+                  <Text style={styles.textoSocialGoogle}>Continuar com Google</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.botaoSocialFacebook}
+                  onPress={() => fbPromptAsync()}
+                  disabled={!fbRequest}
+                >
+                  <Image source={facebook} style={styles.socialIcon} resizeMode="contain" />
+                  <Text style={styles.textoSocialFacebook}>Continuar com Facebook</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={ctrl.irParaCadastro} style={styles.cadastroLink}>
+                  <Text style={styles.cadastroTexto}>
+                    Não tem uma conta? <Text style={styles.cadastroTextoBold}>Cadastre-se</Text>
+                  </Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <TouchableOpacity style={styles.botaoEntrar} onPress={ctrl.handleLogin}>
-                <Text style={styles.textoBotaoEntrar}>Entrar</Text>
-              </TouchableOpacity>
+              <>
+                <Text style={styles.label}>Código de 6 dígitos</Text>
+                <TextInput
+                  style={styles.inputCodigo}
+                  value={ctrl.codigo}
+                  onChangeText={ctrl.setCodigo}
+                  keyboardType="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  placeholderTextColor="#A0A0A0"
+                />
+
+                {ctrl.carregando ? (
+                  <ActivityIndicator size="large" color="#93BD57" style={styles.loader} />
+                ) : (
+                  <TouchableOpacity style={styles.botaoEntrar} onPress={ctrl.handleLogin}>
+                    <Text style={styles.textoBotaoEntrar}>Entrar no Aplicativo</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* BOTÃO VOLTAR PARA A ETAPA DE EMAIL */}
+                <TouchableOpacity style={styles.botaoVoltarEtapa} onPress={() => ctrl.setEtapa('email')}>
+                  <Text style={styles.textoBotaoVoltarEtapa}>Usar outro e-mail ou telefone</Text>
+                </TouchableOpacity>
+              </>
             )}
-
-            <View style={styles.divisorContainer}>
-              <View style={styles.linhaDivisor} />
-              <Text style={styles.textoDivisor}>OU</Text>
-              <View style={styles.linhaDivisor} />
-            </View>
-
-            <TouchableOpacity 
-              style={styles.botaoSocialGoogle} 
-              onPress={() => promptAsync()}
-              disabled={!request}
-            >
-              <Image source={google} style={styles.socialIcon} resizeMode="contain" />
-              <Text style={styles.textoSocialGoogle}>Continuar com Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.botaoSocialFacebook}
-              onPress={() => fbPromptAsync()}
-              disabled={!fbRequest}
-            >
-              <Image source={facebook} style={styles.socialIcon} resizeMode="contain" />
-              <Text style={styles.textoSocialFacebook}>Continuar com Facebook</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={ctrl.irParaCadastro} style={styles.cadastroLink}>
-              <Text style={styles.cadastroTexto}>
-                Não tem uma conta? <Text style={styles.cadastroTextoBold}>Cadastre-se</Text>
-              </Text>
-            </TouchableOpacity>
+            
           </View>
         </ScrollView>
 
@@ -484,11 +498,11 @@ const styles = StyleSheet.create({
     color: '#2A2D34',
     textAlign: 'center',
     fontFamily: 'Nunito',
-    fontSize: 20,
+    fontSize: 18,
     fontStyle: 'italic',
     fontWeight: '700',
     lineHeight: 28,
-    marginBottom: 12,
+    marginBottom: 20,
   },
   label: {
     color: '#2A2D34',
@@ -502,67 +516,60 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     fontSize: 15,
     color: '#333',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 15,
   },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  inputCodigo: {
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
+    paddingVertical: 15,
+    fontSize: 28,
+    letterSpacing: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     width: '100%',
-    marginBottom: 4,
-  },
-  inputPassword: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#333',
-  },
-  eyeIconContainer: {
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  esqueciSenha: {
-    alignSelf: 'flex-end',
-    marginBottom: 16,
-  },
-  esqueciSenhaTexto: {
-    color: '#93BD57',
-    fontFamily: 'Nunito',
-    fontSize: 13,
-    fontWeight: '600',
+    marginBottom: 20,
   },
   loader: {
     marginVertical: 8,
   },
   botaoEntrar: {
     backgroundColor: '#93BD57',
-    height: 44,
+    height: 48,
     borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    marginTop: 5,
   },
   textoBotaoEntrar: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
+  botaoVoltarEtapa: {
+    alignItems: 'center',
+    marginTop: 15,
+    padding: 10,
+  },
+  textoBotaoVoltarEtapa: {
+    color: '#666',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
   divisorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    marginVertical: 12,
   },
   linhaDivisor: {
     flex: 1,
@@ -584,8 +591,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#A0A6B6',
     borderRadius: 5,
-    height: 44,
-    marginBottom: 6,
+    height: 48,
+    marginBottom: 10,
     paddingHorizontal: 12,
   },
   textoSocialGoogle: {
@@ -601,9 +608,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#1877F2',
     borderRadius: 5,
-    height: 44,
+    height: 48,
     paddingHorizontal: 12,
-    marginBottom: 8,
+    marginBottom: 15,
   },
   textoSocialFacebook: {
     color: '#FFFFFF',
@@ -618,7 +625,8 @@ const styles = StyleSheet.create({
   },
   cadastroLink: {
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 5,
+    padding: 10,
   },
   cadastroTexto: {
     color: '#666666',
@@ -639,10 +647,10 @@ const styles = StyleSheet.create({
   erroTexto: {
     color: '#d9534f',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 15,
     fontWeight: 'bold',
     backgroundColor: '#f8d7da',
-    padding: 6,
-    borderRadius: 6,
+    padding: 10,
+    borderRadius: 8,
   },
 });

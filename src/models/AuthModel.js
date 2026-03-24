@@ -3,18 +3,18 @@ import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firesto
 import { auth, db } from '../config/firebase';
 
 export const AuthModel = {
+
   registrarConsumidor: async (dados) => {
     // 1. Verifica se o CPF já existe no banco
     const q = query(collection(db, "consumidores"), where("cpf", "==", dados.cpf));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
-      // Se achar algum documento, interrompe tudo e lança um erro personalizado
       throw new Error("CPF_JA_CADASTRADO");
     }
 
-    // 2. Se o CPF for novo, tenta criar o usuário no Login
-    const userCredential = await createUserWithEmailAndPassword(auth, dados.email, dados.senha);
+    // 2. Cria o usuário no Firebase Auth com senha padrão
+    const userCredential = await createUserWithEmailAndPassword(auth, dados.email, 'fitway@2026');
     const user = userCredential.user;
 
     // 3. Dispara o e-mail de verificação nativo do Firebase
@@ -27,7 +27,7 @@ export const AuthModel = {
       cpf: dados.cpf,
       telefone: dados.telefone,
       data_nascimento: dados.dataNascimento,
-      id_consumidor: dados.id_consumidor, // Código único do consumidor
+      id_consumidor: dados.id_consumidor,
       data_criacao: new Date()
     });
 
@@ -38,14 +38,13 @@ export const AuthModel = {
     // 1. Verifica se o CNPJ já existe no banco
     const q = query(collection(db, "restaurantes"), where("cnpj", "==", dados.cnpj));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
-      // Se achar, interrompe tudo e lança erro
       throw new Error("CNPJ_JA_CADASTRADO");
     }
 
-    // 2. Tenta criar usuário no Login
-    const userCredential = await createUserWithEmailAndPassword(auth, dados.email, dados.senha);
+    // 2. Cria o usuário no Firebase Auth com senha padrão
+    const userCredential = await createUserWithEmailAndPassword(auth, dados.email, 'fitway@2026');
     const user = userCredential.user;
 
     // 3. Dispara o e-mail de verificação nativo do Firebase
@@ -57,7 +56,7 @@ export const AuthModel = {
       razao_social: dados.razaoSocial,
       cnpj: dados.cnpj,
       email_rest: dados.email,
-      id_restaurante: dados.id_restaurante, // Código único do restaurante
+      id_restaurante: dados.id_restaurante,
       data_criacao: new Date()
     });
 
