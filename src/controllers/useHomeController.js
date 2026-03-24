@@ -2,60 +2,102 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { LoginModel } from '../models/LoginModel';
 import { RestauranteModel } from '../models/RestauranteModel';
+import { ProdutoModel } from '../models/ProdutoModel'; // 👉 Importamos o Model de Produtos
 
 export const useHomeController = () => {
-  const [restaurantes, setRestaurantes] = useState([]);
+  const [restaurantesBase, setRestaurantesBase] = useState([]);
+  const [restaurantesFiltrados, setRestaurantesFiltrados] = useState([]);
+  
+  // 👉 Nova "memória" para guardar todos os pratos do app
+  const [produtosBase, setProdutosBase] = useState([]);
+  
   const [carregando, setCarregando] = useState(true);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
+  const [busca, setBusca] = useState('');
 
-  // Carrega todos os restaurantes assim que a tela abre
   useEffect(() => {
-    carregarRestaurantes();
+    carregarDadosIniciais();
   }, []);
 
-  const carregarRestaurantes = async (especialidade = null) => {
+  const carregarDadosIniciais = async (especialidade = null) => {
     setCarregando(true);
     try {
-      let listaDb = [];
-      
+      // 1. Busca os Restaurantes
+      let listaRestaurantes = [];
       if (especialidade) {
-        listaDb = await RestauranteModel.buscarPorEspecialidade(especialidade);
+        listaRestaurantes = await RestauranteModel.buscarPorEspecialidade(especialidade);
       } else {
-        listaDb = await RestauranteModel.buscarTodos();
+        listaRestaurantes = await RestauranteModel.buscarTodos();
       }
 
-      // Mapeamos os dados do banco para o formato que os Cards precisam
-      const formatados = listaDb.map(r => ({
-        // Pega o ID que criamos ou o ID do documento
+      const formatados = listaRestaurantes.map(r => ({
         id: r.id_restaurante || r.id, 
         nome: r.nome_fantasia || r.razao_social || 'Restaurante Parceiro',
-        // Se não tiver foto no banco, usa uma genérica
         foto: r.foto || 'https://images.unsplash.com/photo-1490818387583-1b5ba45227d8?q=80&w=400', 
         avaliacao: r.avaliacao || 5.0,
         descricao: r.descricao || r.especialidade || 'O melhor da região para você.',
+        especialidade: r.especialidade || '', 
         tempoEntrega: r.tempo_entrega || '30-40',
         taxaEntrega: r.taxa_entrega || 0,
         pedidoMinimo: r.pedido_minimo || 10,
       }));
 
-      setRestaurantes(formatados);
+      // 2. Busca TODOS os Pratos (para a pesquisa funcionar)
+      const listaProdutos = await ProdutoModel.buscarTodos();
+
+      setProdutosBase(listaProdutos);
+      setRestaurantesBase(formatados);
+      setRestaurantesFiltrados(formatados);
     } catch (error) {
       console.error(error);
-      alert("Erro ao buscar restaurantes.");
+      alert("Erro ao buscar dados iniciais.");
     } finally {
       setCarregando(false);
     }
   };
 
   const filtrarPorCategoria = (nomeCategoria) => {
-    // Se clicar na categoria que já está selecionada, ele tira o filtro (mostra tudo)
+    setBusca(''); 
     if (categoriaSelecionada === nomeCategoria) {
       setCategoriaSelecionada(null);
-      carregarRestaurantes(null);
+      carregarDadosIniciais(null);
     } else {
-      // Se clicar numa nova, ele filtra
       setCategoriaSelecionada(nomeCategoria);
-      carregarRestaurantes(nomeCategoria);
+      carregarDadosIniciais(nomeCategoria);
+    }
+  };
+
+  // 👉 Lógica de Busca Turbinada (Restaurante + Pratos)
+  const realizarBusca = (texto) => {
+    setBusca(texto);
+    
+    if (texto.trim() === '') {
+      setRestaurantesFiltrados(restaurantesBase);
+    } else {
+      const textoMinusculo = texto.toLowerCase();
+      
+      const resultados = restaurantesBase.filter(restaurante => {
+        // Verifica se bate com o Restaurante
+        const nomeSeguro = String(restaurante.nome || '').toLowerCase();
+        const especialidadeSegura = String(restaurante.especialidade || '').toLowerCase();
+        const matchRestaurante = nomeSeguro.includes(textoMinusculo) || especialidadeSegura.includes(textoMinusculo);
+        
+        // Verifica se algum prato DESTE restaurante tem o texto buscado
+        const matchPrato = produtosBase.some(produto => {
+          // Só olha os pratos que pertencem a este restaurante
+          if (produto.id_restaurante !== restaurante.id) return false;
+          
+          const nomeProduto = String(produto.nome || '').toLowerCase();
+          const descProduto = String(produto.descricao || '').toLowerCase();
+          
+          return nomeProduto.includes(textoMinusculo) || descProduto.includes(textoMinusculo);
+        });
+        
+        // Se bater com a loja ou com o cardápio da loja, mostra na tela!
+        return matchRestaurante || matchPrato;
+      });
+      
+      setRestaurantesFiltrados(resultados);
     }
   };
 
@@ -75,9 +117,11 @@ export const useHomeController = () => {
   return { 
     handleLogoff, 
     abrirRestaurante,
-    restaurantes,
+    restaurantesFiltrados, 
     carregando,
     categoriaSelecionada,
-    filtrarPorCategoria
+    filtrarPorCategoria,
+    busca,
+    realizarBusca
   };
 };

@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export const RestauranteModel = {
@@ -21,6 +21,21 @@ export const RestauranteModel = {
       return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error("Erro ao buscar por especialidade:", error);
+      throw error;
+    }
+  },
+
+  // 👉 Função NOVA: Busca um único restaurante pelo ID
+  async buscarPorId(idRestaurante) {
+    try {
+      const docRef = doc(db, 'restaurantes', idRestaurante);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error("Erro ao buscar restaurante por ID:", error);
       throw error;
     }
   }

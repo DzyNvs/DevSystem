@@ -1,11 +1,9 @@
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export const PedidoModel = {
-  // 👉 1. Função para BUSCAR os pedidos do restaurante que está logado
   async buscarPedidosDoRestaurante(idDoRestaurante) {
     try {
-      // Busca na coleção 'pedidos' ONDE o campo 'id_restaurante' for igual ao ID passado
       const q = query(
         collection(db, 'pedidos'),
         where('id_restaurante', '==', idDoRestaurante)
@@ -16,7 +14,7 @@ export const PedidoModel = {
 
       snapshot.forEach((docSnap) => {
         pedidos.push({
-          id: docSnap.id, // Esse é o ID aleatório do próprio documento do Firebase
+          id: docSnap.id, 
           ...docSnap.data()
         });
       });
@@ -28,29 +26,23 @@ export const PedidoModel = {
     }
   },
 
-  // 👉 2. Função DE TESTE: Para você simular a criação de um pedido (já que a tela do consumidor não está pronta)
-  async criarPedidoSimulado(idRestaurante) {
+  // 👉 AQUI ESTÁ A FUNÇÃO QUE ELE NÃO ESTAVA ACHANDO
+  async criarPedido(dadosPedido) {
     try {
-      // Gera um ID de pedido único
-      const idPedido = `ped_${Math.floor(100000 + Math.random() * 900000)}`;
-      const idConsumidorFalso = `cons_${Math.floor(100000 + Math.random() * 900000)}`;
-
-      await setDoc(doc(db, 'pedidos', idPedido), {
-        id_pedido: idPedido,             // Vínculo 1: O ID do próprio pedido
-        id_restaurante: idRestaurante,   // Vínculo 2: De qual restaurante é
-        id_consumidor: idConsumidorFalso,// Vínculo 3: Quem comprou (vamos usar um falso por enquanto)
-        status: 'novo',
-        metodo_pagamento: 'pix',
-        entregador_codigo: '1234',
-        subtotal: 50.00,
-        total_final: 55.00,
+      const docRef = await addDoc(collection(db, 'pedidos'), {
+        id_restaurante: dadosPedido.id_restaurante,
+        id_consumidor: dadosPedido.id_consumidor,
+        itens: dadosPedido.itens,
+        subtotal: dadosPedido.subtotal,
+        taxa_entrega: dadosPedido.taxa_entrega,
+        total_final: dadosPedido.total_final,
+        status: 'pendente', // pendente, preparando, saiu_entrega, entregue
+        link_pagamento: dadosPedido.link_pagamento || '',
         data_criacao: new Date(),
-        itens: ["1x Hamburguer (R$ 30.00)", "1x Refri (R$ 10.00)", "1x Batata (R$ 10.00)"]
       });
-
-      return idPedido;
+      return docRef.id;
     } catch (error) {
-      console.error("Erro ao criar pedido simulado:", error);
+      console.error("Erro ao criar pedido:", error);
       throw error;
     }
   }

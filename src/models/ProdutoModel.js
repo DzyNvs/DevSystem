@@ -23,6 +23,21 @@ export const ProdutoModel = {
     }
   },
 
+  // 👉 Função NOVA: Busca todos os produtos de todos os restaurantes para a barra de pesquisa
+  async buscarTodos() {
+    try {
+      const snap = await getDocs(collection(db, 'produtos'));
+      const produtos = [];
+      snap.forEach((docSnap) => {
+        produtos.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      return produtos;
+    } catch (error) {
+      console.error("Erro ao buscar todos os produtos:", error);
+      throw error;
+    }
+  },
+
   async buscarPorRestaurante(idRestaurante) {
     try {
       // Busca usando a string do ID
@@ -78,6 +93,6 @@ export const ProdutoModel = {
     } catch (error) {
       console.error("Erro ao atualizar produto:", error);
       throw error;
-    }
+    };
   }
 };

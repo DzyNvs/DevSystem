@@ -34,13 +34,17 @@ export function HeaderConsumidor() {
           </View>
         </TouchableOpacity>
         
-        <View style={styles.cartInfo}>
+        <TouchableOpacity style={styles.cartInfo} onPress={ctrl.irParaCarrinho}>
           <Ionicons name="bag-handle-outline" size={24} color="#333" />
           <View style={{ marginLeft: 8 }}>
-            <Text style={styles.cartValue}>R$ 0,00</Text>
-            <Text style={styles.cartItems}>0 itens</Text>
+            <Text style={styles.cartValue}>
+              R$ {ctrl.valorTotal.toFixed(2).replace('.', ',')}
+            </Text>
+            <Text style={styles.cartItems}>
+              {ctrl.totalItens} {ctrl.totalItens === 1 ? 'item' : 'itens'}
+            </Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );

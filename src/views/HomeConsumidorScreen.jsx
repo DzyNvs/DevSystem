@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react'; // Removido o useState daqui, o Controller cuida disso agora
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ImageBackground, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderConsumidor } from './HeaderConsumidor';
@@ -7,9 +7,7 @@ import { useHomeController } from '../controllers/useHomeController';
 
 export function HomeConsumidorScreen() {
   const ctrl = useHomeController();
-  const [busca, setBusca] = useState('');
 
-  // Mantemos as categorias visuais, mas agora elas filtram o banco!
   const categorias = [
     { id: '1', nome: 'Marmitas', img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=300' },
     { id: '2', nome: 'Bowls', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=300' },
@@ -39,8 +37,8 @@ export function HomeConsumidorScreen() {
               <Ionicons name="search" size={20} color="#777" style={{ marginLeft: 10 }} />
               <TextInput 
                 style={styles.searchInput} 
-                value={busca} 
-                onChangeText={setBusca} 
+                value={ctrl.busca} // 👉 Pegando do Controller
+                onChangeText={ctrl.realizarBusca} // 👉 Chama a função a cada letra digitada
                 placeholder="Busque por item ou loja" 
                 placeholderTextColor="#999"
               />
@@ -63,7 +61,6 @@ export function HomeConsumidorScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.categoriasList}
             renderItem={({ item }) => {
-              // Verifica se essa é a categoria selecionada para mudar o visual
               const isSelecionada = ctrl.categoriaSelecionada === item.nome;
 
               return (
@@ -85,16 +82,20 @@ export function HomeConsumidorScreen() {
 
           {/* RESTAURANTES */}
           <Text style={styles.sectionTitle}>
-            {ctrl.categoriaSelecionada ? `Especialidade: ${ctrl.categoriaSelecionada.toUpperCase()}` : 'Restaurantes em destaque'}
+            {ctrl.busca 
+              ? `Resultados para "${ctrl.busca}"` 
+              : ctrl.categoriaSelecionada 
+                ? `Especialidade: ${ctrl.categoriaSelecionada.toUpperCase()}` 
+                : 'Restaurantes em destaque'}
           </Text>
           
           {ctrl.carregando ? (
             <ActivityIndicator size="large" color="#8BC34A" style={{ marginTop: 40 }} />
-          ) : ctrl.restaurantes.length === 0 ? (
-            <Text style={styles.textoVazio}>Nenhum restaurante encontrado nessa categoria. 😕</Text>
+          ) : ctrl.restaurantesFiltrados.length === 0 ? ( // 👉 Renderiza a lista filtrada
+            <Text style={styles.textoVazio}>Nenhum restaurante encontrado. 😕</Text>
           ) : (
             <View style={styles.gridContainer}>
-              {ctrl.restaurantes.map((restaurante) => (
+              {ctrl.restaurantesFiltrados.map((restaurante) => (
                 <RestauranteCard 
                   key={restaurante.id} 
                   restaurante={restaurante} 
@@ -130,10 +131,10 @@ const styles = StyleSheet.create({
   
   categoriasList: { paddingBottom: 10, gap: 16 },
   categoriaCard: { width: 150, height: 150, borderRadius: 8 },
-  categoriaCardAtiva: { transform: [{ scale: 0.95 }] }, // Dá um efeito de afundado no card clicado
+  categoriaCardAtiva: { transform: [{ scale: 0.95 }] },
   categoriaImg: { width: '100%', height: '100%', justifyContent: 'flex-end' },
   categoriaOverlay: { backgroundColor: 'rgba(0,0,0,0.4)', padding: 10, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
-  categoriaOverlayAtiva: { backgroundColor: 'rgba(139, 195, 74, 0.8)' }, // Fica verdinho quando clicado
+  categoriaOverlayAtiva: { backgroundColor: 'rgba(139, 195, 74, 0.8)' },
   categoriaText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   categoriaTextAtiva: { color: '#FFF' },
 
