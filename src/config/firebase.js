@@ -1,11 +1,10 @@
-// Importa a função de inicialização principal
 import { initializeApp } from "firebase/app";
 
-// TODO: Importar os serviços que vamos usar no FitWay (Banco e Login)
+// Importa os serviços que vamos usar no FitWay (Banco, Login e STORAGE)
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-
-// Sua configuração do Firebase (mantive a sua)
+import { getStorage } from "firebase/storage"; 
+// Sua configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyABqUR1DTGlBAvExdWBg3Os4ixY1SGk3tI",
   authDomain: "fitway-98104.firebaseapp.com",
@@ -24,5 +23,8 @@ const db = getFirestore(app);
 // 3. Inicializa a Autenticação (Login)
 const auth = getAuth(app);
 
-// 4. Exporta essas variáveis para usarmos nas outras telas!
-export { auth, db };
+// 4. Inicializa o Storage (Guarda as fotos) <-- 2. Inicializamos o serviço
+const storage = getStorage(app);
+
+// 5. Exporta essas variáveis para usarmos nas outras telas! <-- 3. Exportamos o storage
+export { auth, db, storage };

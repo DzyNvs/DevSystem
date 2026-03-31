@@ -1,16 +1,22 @@
 import { router } from 'expo-router';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useState } from 'react';
+import { auth, db } from '../config/firebase';
 import { LoginModel } from '../models/LoginModel';
 
 export const useLoginController = () => {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [identificador, setIdentificador] = useState(''); 
+  const [codigo, setCodigo] = useState('');
+  const [etapa, setEtapa] = useState('email');
+  const [emailConfirmado, setEmailConfirmado] = useState('');
+  
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !senha) {
-      setErro("Por favor, preencha e-mail e senha.");
+  // --- PASSO 1: SOLICITAR O CÓDIGO ---
+  const handleSolicitarCodigo = async () => {
+    if (!identificador) {
+      setErro("Por favor, preencha o e-mail ou telefone.");
       return;
     }
 
@@ -18,30 +24,105 @@ export const useLoginController = () => {
     setErro('');
 
     try {
-      // Recebe o usuário logado e o seu tipo
-      const resultado = await LoginModel.entrar(email, senha);
+      let emailParaLogin = identificador.trim();
+
+      // Se não tem @, assume que é telefone e busca o e-mail
+      if (!emailParaLogin.includes('@')) {
+        let telefoneBusca = emailParaLogin;
+        const apenasNumeros = emailParaLogin.replace(/\D/g, '');
+
+        if (apenasNumeros.length === 11) {
+          telefoneBusca = apenasNumeros.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        }
+
+        const qTel = query(collection(db, 'consumidores'), where('telefone', '==', telefoneBusca));
+        const snapTel = await getDocs(qTel);
+
+        if (snapTel.empty) {
+          throw new Error("TELEFONE_NAO_ENCONTRADO");
+        }
+
+        const docUsuario = snapTel.docs[0].data();
+        if (!docUsuario.email) {
+          throw new Error("EMAIL_NAO_VINCULADO");
+        }
+        
+        emailParaLogin = docUsuario.email; 
+      }
+
+      // Chama o Model para pedir o código ao Node.js
+      await LoginModel.solicitarCodigoLogin(emailParaLogin);
       
-      // Redireciona baseado no tipo
+      setEmailConfirmado(emailParaLogin);
+      setEtapa('codigo');
+
+    } catch (error) {
+      console.log("Erro ao solicitar código:", error);
+      let mensagemErro = "Erro ao enviar o código. Tente novamente.";
+      
+      if (error.message === "TELEFONE_NAO_ENCONTRADO") {
+        mensagemErro = "Nenhuma conta encontrada com este número de telefone.";
+      } else if (error.message === "EMAIL_NAO_VINCULADO") {
+        mensagemErro = "Conta encontrada, mas não há um e-mail válido vinculado a ela.";
+      } else if (error.message) {
+        mensagemErro = error.message;
+      }
+
+      setErro(mensagemErro);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // --- PASSO 2: VALIDAR O CÓDIGO E ENTRAR ---
+  const handleLogin = async () => {
+    if (!codigo || codigo.length !== 6) {
+      setErro("Por favor, digite o código de 6 dígitos.");
+      return;
+    }
+
+    setCarregando(true);
+    setErro('');
+
+    try {
+      const resultado = await LoginModel.validarCodigoELogar(emailConfirmado, codigo);
+      
       if (resultado.tipo === 'restaurante') {
-        router.replace('/home-restaurante');
+        const userUid = auth.currentUser?.uid || resultado.uid; 
+        
+        if (userUid) {
+          const docRef = doc(db, 'restaurantes', userUid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const dadosRestaurante = docSnap.data();
+            if (dadosRestaurante.onboardingConcluido || (dadosRestaurante.endereco && dadosRestaurante.endereco.rua)) {
+              router.replace('/home-restaurante-screen');
+            } else {
+              router.replace('/onboarding-restaurante');
+            }
+          } else {
+            router.replace('/onboarding-restaurante');
+          }
+        } else {
+          router.replace('/onboarding-restaurante');
+        }
+
       } else {
-        router.replace('/home-consumidor');
+        // É Consumidor
+        const userUid = auth.currentUser?.uid || resultado.uid;
+        if (userUid) {
+          const docRef = doc(db, 'consumidores', userUid);
+          const docSnap = await getDoc(docRef);
+          const dadosUsuario = docSnap.exists() ? docSnap.data() : {};
+          console.log("Informações do Consumidor Logado:", dadosUsuario);
+        }
+        router.replace('/home-consumidor-screen');
       }
       
     } catch (error) {
       console.log("Erro no login:", error);
-      
-      let mensagemErro = "Erro ao fazer login. Tente novamente.";
-
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        mensagemErro = "E-mail ou senha incorretos.";
-      } else if (error.code === 'auth/invalid-email') {
-        mensagemErro = "O formato do e-mail é inválido.";
-      } else if (error.message === "TIPO_NAO_ENCONTRADO") {
-        mensagemErro = "Conta existente, mas não foi possível definir se é consumidor ou restaurante.";
-      }
-
-      setErro(mensagemErro);
+      setErro(error.message || "Código inválido ou expirado.");
     } finally {
       setCarregando(false);
     }
@@ -51,5 +132,11 @@ export const useLoginController = () => {
     router.push('/cadastro');
   };
 
-  return { email, setEmail, senha, setSenha, carregando, erro, handleLogin, irParaCadastro };
+  return { 
+    identificador, setIdentificador, 
+    codigo, setCodigo, 
+    etapa, setEtapa, 
+    carregando, erro, setErro,
+    handleSolicitarCodigo, handleLogin, irParaCadastro 
+  };
 };
