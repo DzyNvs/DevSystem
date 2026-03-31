@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useHomeRestauranteController } from '../controllers/useHomeRestauranteController';
 import { HeaderRestaurante } from './HeaderRestaurante';
 
@@ -107,7 +107,7 @@ export function HomeRestauranteScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F7F6F2', 
   },
   scrollContainer: {
     flex: 1,
@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  
   statusContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -124,11 +125,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
   },
   statusTitulo: { fontSize: 14, color: '#666', marginBottom: 4 },
   statusTexto: { fontSize: 16, fontWeight: 'bold' },
@@ -145,17 +143,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     gap: 10,
   },
+  
+  // METRICAS COM A MESMA BORDA E FUNDO BRANCO
   metricaCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
   },
   metricaValor: {
     fontSize: 20,
@@ -174,18 +171,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  
+  // GRID CARDS 
   gridCard: {
     width: '48%',
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     alignItems: 'flex-start',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
   },
   iconBox: {
     width: 48,

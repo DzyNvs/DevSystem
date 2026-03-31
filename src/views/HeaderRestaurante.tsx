@@ -1,9 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHeaderRestauranteController } from '../controllers/useHeaderRestauranteController';
 
-// Puxando a logo igual você fez na tela de cadastro/login
 const logo = require('../../assets/images/logo.png');
 
 export function HeaderRestaurante() {
@@ -26,13 +25,13 @@ export function HeaderRestaurante() {
 
         {/* Sino de Notificações com a "bolinha" vermelha de aviso */}
         <TouchableOpacity style={styles.iconButton} onPress={() => alert('Sem novas notificações!')}>
-          <Ionicons name="notifications-outline" size={24} color="#333" />
+          <Ionicons name="notifications-outline" size={24} color="#005F02" />
           <View style={styles.badge} />
         </TouchableOpacity>
 
         {/* Botão de Perfil */}
         <TouchableOpacity style={styles.iconButton} onPress={ctrl.handlePerfilClick}>
-          <Ionicons name="person-circle-outline" size={28} color="#333" />
+          <Ionicons name="person-circle-outline" size={28} color="#005F02" />
         </TouchableOpacity>
         
       </View>
@@ -45,17 +44,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF', 
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 16 : 40, 
-    paddingBottom: 16,
+    paddingHorizontal: 70, 
+    height: 80, 
+    backgroundColor: '#F2E3BB', 
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    elevation: 3, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    borderColor: 'rgba(0,0,0,0.05)', 
     zIndex: 10, 
   },
   leftContainer: {
@@ -63,8 +56,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    height: 35,
     width: 110,
+    height: 55, 
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -72,11 +65,12 @@ const styles = StyleSheet.create({
     gap: 16, 
   },
   nomeRestauranteText: {
+    fontFamily: 'Nunito',
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#2e7d32', // Cor verde para dar destaque ao nome
+    color: '#333', 
     marginRight: 8,
-    maxWidth: 150, // Evita que nomes gigantes quebrem o layout
+    maxWidth: 150, 
   },
   iconButton: {
     position: 'relative',
@@ -91,6 +85,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#E53935', 
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: '#F2E3BB', 
   }
 });

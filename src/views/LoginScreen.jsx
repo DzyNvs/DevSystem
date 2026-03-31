@@ -1,10 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -168,12 +166,9 @@ export function LoginScreen() {
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
           
-          {isSmallScreen ? (
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
-              <Ionicons name="menu" size={30} color="#555" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.rightItems}>
+          {/* Em telas grandes mostra ambos os itens; em telas pequenas mostra apenas Ambiente seguro */}
+          <View style={styles.rightItems}>
+            {!isSmallScreen && (
               <TouchableOpacity
                 style={[
                   styles.restauranteGroup,
@@ -191,61 +186,19 @@ export function LoginScreen() {
                   Sou restaurante
                 </Text>
               </TouchableOpacity>
-              <View style={styles.ambienteGroup}>
-                <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-                <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={menuVisible}
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Opções</Text>
-              <TouchableOpacity onPress={() => setMenuVisible(false)}>
-                <Ionicons name="close" size={30} color="#555" />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.modalItem,
-                highlightRestaurante && styles.restauranteAtivo,
-              ]}
-              onPress={() => {
-                setHighlightRestaurante(!highlightRestaurante);
-                setMenuVisible(false);
-              }}
-            >
-              <Image source={store} style={styles.storeIcon} resizeMode="contain" />
-              <Text
-                style={[
-                  styles.modalItemText,
-                  highlightRestaurante && styles.restauranteTextAtivo,
-                ]}
-              >
-                Sou restaurante
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalItem}>
+            )}
+            <View style={styles.ambienteGroup}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-              <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
+              <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
             </View>
           </View>
         </View>
-      </Modal>
+      </View>
 
       <View style={styles.mainContainer}>
+        {/* COLUNA ESQUERDA */}
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={[
             styles.leftColumn,
             isSmallScreen && styles.leftColumnFull,
@@ -348,6 +301,7 @@ export function LoginScreen() {
           </View>
         </ScrollView>
 
+        {/* COLUNA DIREITA */}
         {!isSmallScreen && (
           <View style={styles.rightColumn}>
             <Image source={capa} style={styles.capaImage} resizeMode="cover" />
@@ -386,9 +340,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 110,
     height: 55,
-  },
-  menuButton: {
-    padding: 5,
   },
   rightItems: {
     flexDirection: 'row',
@@ -431,42 +382,6 @@ const styles = StyleSheet.create({
   vectorIcon: {
     width: 22,
     height: 22,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#F2E3BB',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    minHeight: 200,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2A2D34',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: '#555',
-    marginLeft: 12,
   },
   mainContainer: {
     flex: 1,
