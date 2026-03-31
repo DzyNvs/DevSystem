@@ -1,20 +1,31 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useCadastroPratoController } from '../controllers/useCadastroPratoController';
 import { HeaderRestaurante } from './HeaderRestaurante';
 
 export function CadastroPratoScreen() {
   const ctrl = useCadastroPratoController();
+  const router = useRouter(); 
 
   return (
     <View style={styles.mainContainer}>
       <HeaderRestaurante />
       
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        
+        {/*Botão voltar */}
+        <TouchableOpacity 
+          style={styles.btnVoltar} 
+          onPress={() => router.push('/restaurante/cardapio')}
+        >
+          <Ionicons name="arrow-back" size={20} color="#005F02" />
+          <Text style={styles.btnVoltarTexto}>Voltar para Meu Cardápio</Text>
+        </TouchableOpacity>
+
         <Text style={styles.titulo}>Novo Prato</Text>
         <Text style={styles.subtitulo}>Cadastre um item no seu cardápio</Text>
 
-        {/* Botão de Foto adicionado de volta! */}
         <TouchableOpacity style={styles.imagemContainer} onPress={ctrl.escolherImagem}>
           {ctrl.imagemUri ? (
             <Image source={{ uri: ctrl.imagemUri }} style={styles.imagemPreview} />
@@ -32,7 +43,6 @@ export function CadastroPratoScreen() {
           <Text style={styles.label}>Descrição</Text>
           <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} value={ctrl.descricao} onChangeText={ctrl.setDescricao} placeholder="Ingredientes e detalhes..." multiline />
 
-          {/* Preço e Calorias lado a lado */}
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Preço (R$) *</Text>
@@ -48,7 +58,6 @@ export function CadastroPratoScreen() {
           <TextInput style={styles.input} value={ctrl.categoria} onChangeText={ctrl.setCategoria} placeholder="Ex: Prato Principal" />
         </View>
 
-        {/* Botão com Loading */}
         <TouchableOpacity 
           style={[styles.btnSalvar, ctrl.salvando && { backgroundColor: '#A5D6A7' }]} 
           onPress={ctrl.salvarPrato}
@@ -66,24 +75,53 @@ export function CadastroPratoScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F9FBE7' },
+  mainContainer: { flex: 1, backgroundColor: '#F7F6F2' },
   container: { flex: 1 },
   content: { padding: 24 },
-  titulo: { fontSize: 28, fontWeight: 'bold', color: '#1B4332' },
-  subtitulo: { fontSize: 16, color: '#555', marginBottom: 20 },
-  
-  imagemContainer: { width: '100%', height: 200, backgroundColor: '#E0DBC8', borderRadius: 12, overflow: 'hidden', marginBottom: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#CCC', borderStyle: 'dashed' },
+  btnVoltar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+  },
+  btnVoltarTexto: {
+    fontSize: 14,
+    color: '#005F02',
+    marginLeft: 5,
+    fontWeight: '500',
+    fontFamily: 'Nunito',
+  },
+  titulo: { fontSize: 28, fontWeight: 'bold', color: '#005F02', fontFamily: 'Nunito' },
+  subtitulo: { fontSize: 16, color: '#666', marginBottom: 20, fontFamily: 'Nunito' },
+  imagemContainer: { 
+    width: '100%', 
+    height: 200, 
+    backgroundColor: '#FFF', 
+    borderRadius: 12, 
+    overflow: 'hidden', 
+    marginBottom: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: '#EAEAEA', 
+    borderStyle: 'dashed' 
+  },
   imagemPreview: { width: '100%', height: '100%' },
   imagemPlaceholder: { alignItems: 'center' },
-  imagemTexto: { color: '#2e7d32', fontWeight: 'bold', fontSize: 16 },
-
+  imagemTexto: { color: '#005F02', fontWeight: 'bold', fontSize: 16 },
   form: { width: '100%', marginBottom: 30 },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5, marginTop: 10 },
-  input: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 12, fontSize: 16 },
-  
+  label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5, marginTop: 10, fontFamily: 'Nunito' },
+  input: { 
+    backgroundColor: '#FFF', 
+    borderWidth: 1, 
+    borderColor: '#EAEAEA', 
+    borderRadius: 8, 
+    padding: 12, 
+    fontSize: 16,
+    fontFamily: 'Nunito'
+  },
   row: { flexDirection: 'row', gap: 10 },
   col: { flex: 1 },
-
-  btnSalvar: { backgroundColor: '#4CAF50', padding: 16, borderRadius: 8, alignItems: 'center' },
-  btnSalvarText: { color: '#FFF', fontWeight: 'bold', fontSize: 18 }
+  btnSalvar: { backgroundColor: '#005F02', padding: 16, borderRadius: 8, alignItems: 'center' },
+  btnSalvarText: { color: '#FFF', fontWeight: 'bold', fontSize: 18, fontFamily: 'Nunito' }
 });

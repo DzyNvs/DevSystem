@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCardapioController } from '../controllers/useCardapioController';
 import { HeaderRestaurante } from './HeaderRestaurante';
 
 export function CardapioScreen() {
   const ctrl = useCardapioController();
+  const router = useRouter();
 
   const renderPrato = ({ item }) => (
     <View style={styles.cardPrato}>
@@ -32,6 +33,16 @@ export function CardapioScreen() {
       <HeaderRestaurante />
 
       <View style={styles.content}>
+        
+        {/* Botão Voltar */}
+        <TouchableOpacity 
+          style={styles.btnVoltar} 
+          onPress={() => router.push('/home-restaurante-screen')}
+        >
+          <Ionicons name="arrow-back" size={20} color="#005F02" />
+          <Text style={styles.btnVoltarTexto}>Voltar para Home</Text>
+        </TouchableOpacity>
+
         <View style={styles.headerTitle}>
           <Text style={styles.titulo}>Meu Cardápio</Text>
           <TouchableOpacity style={styles.btnNovo} onPress={ctrl.irParaNovoPrato}>
@@ -40,7 +51,7 @@ export function CardapioScreen() {
         </View>
 
         {ctrl.carregando ? (
-          <ActivityIndicator size="large" color="#4CAF50" style={{ marginTop: 50 }} />
+          <ActivityIndicator size="large" color="#005F02" style={{ marginTop: 50 }} />
         ) : (
           <FlatList
             data={ctrl.produtos}
@@ -58,12 +69,45 @@ export function CardapioScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F5F5F5' },
-  content: { flex: 1, padding: 20 },
+  mainContainer: { flex: 1, backgroundColor: '#F7F6F2' },
+  content: { flex: 1, padding: 24 },
+  
+  // Estilos do Botão Voltar 
+  btnVoltar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15, 
+    alignSelf: 'flex-start',
+  },
+  btnVoltarTexto: {
+    fontFamily: 'Nunito',
+    fontSize: 14,
+    color: '#005F02',
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+
   headerTitle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  titulo: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  btnNovo: { backgroundColor: '#4CAF50', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  btnNovoText: { color: '#FFF', fontWeight: 'bold' },
+  
+  titulo: { 
+    fontFamily: 'Nunito',
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#005F02' 
+  },
+  
+  btnNovo: { 
+    backgroundColor: '#005F02', 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    borderRadius: 8 
+  },
+  btnNovoText: { 
+    fontFamily: 'Nunito',
+    color: '#FFF', 
+    fontWeight: 'bold' 
+  },
+  
   lista: { paddingBottom: 40 },
   
   cardPrato: {
@@ -79,13 +123,43 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    borderWidth: 1, 
+    borderColor: '#EAEAEA'
   },
+  
   infoPrato: { flex: 1 },
-  nomePrato: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  categoriaPrato: { fontSize: 12, color: '#777', marginBottom: 4 },
-  precoPrato: { fontSize: 16, fontWeight: 'bold', color: '#2e7d32' },
+  nomePrato: { 
+    fontFamily: 'Nunito',
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#333' 
+  },
+  categoriaPrato: { 
+    fontFamily: 'Nunito',
+    fontSize: 12, 
+    color: '#666', 
+    marginBottom: 4 
+  },
+  
+  // Preço com o verde escuro
+  precoPrato: { 
+    fontFamily: 'Nunito',
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#005F02' 
+  },
   
   acoesPrato: { flexDirection: 'row', gap: 12 },
-  btnAcao: { padding: 8, backgroundColor: '#F5F5F5', borderRadius: 8 },
-  textoVazio: { textAlign: 'center', marginTop: 50, color: '#777', fontSize: 16 }
+  btnAcao: { 
+    padding: 8, 
+    backgroundColor: '#F7F6F2', 
+    borderRadius: 8 
+  },
+  textoVazio: { 
+    fontFamily: 'Nunito',
+    textAlign: 'center', 
+    marginTop: 50, 
+    color: '#666', 
+    fontSize: 16 
+  }
 });
