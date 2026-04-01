@@ -1,73 +1,57 @@
-# 🥗 FitWay
+# 🥗 FitWay - Conectando Saúde e Sabor
 
-> **Conectando saúde, sabor e oportunidades.**
-
-## 📄 Sobre o Projeto
-
-O **FitWay** é uma plataforma (Web e Mobile) de conexão e marketplace projetada para ser o elo entre dois grupos fundamentais: **estabelecimentos do ramo alimentício voltados para a saúde** e **consumidores que buscam uma alimentação equilibrada**.
-
-
-
-Atualmente, existe uma lacuna no mercado: consumidores têm dificuldade em encontrar opções confiáveis para dietas específicas, enquanto restaurantes saudáveis carecem de um canal centralizado para atingir seu público-alvo. O **FIT WAY** nasce para resolver esse problema, promovendo acessibilidade, saúde e novos negócios.
----
-
-## 🎯 Objetivos
-
-O principal objetivo da plataforma é integrar a oferta e a demanda de alimentação saudável através de:
-
-1.  **Divulgação Centralizada:** Um hub para visualização de estabelecimentos parceiros.
-2.  **Busca Facilitada:** Ferramentas de pesquisa para consumidores com demandas alimentares específicas.
-3.  **Direcionamento de Vendas:** Canal direto para aumentar o faturamento dos restaurantes cadastrados.
+O FitWay é uma plataforma que conecta consumidores em busca de uma vida saudável a restaurantes especializados em alimentação equilibrada. Desenvolvido com foco em performance e escalabilidade, o projeto utiliza o que há de mais moderno no desenvolvimento atual.
 
 ---
 
-## 🚀 Benefícios da Solução
+## 🛠️ Tecnologias e Arquitetura
 
-A implementação do FITWAY visa impactar o ecossistema de alimentação saudável gerando valor através de:
+O projeto foi construído utilizando uma arquitetura MVC (Model-View-Controller) para garantir organização e facilidade de manutenção.
 
-* 👁️ **Visibilidade de Mercado:** Ampliação do alcance dos estabelecimentos, conectando-os ao seu público ideal.
-* ⏳ **Facilidade e Acesso:** Centralização de opções, otimizando o tempo do consumidor.
-* ❤️ **Fomento à Saúde:** Incentivo à qualidade de vida facilitando o acesso a refeições equilibradas.
-* 📈 **Expansão de Vendas:** Aumento de faturamento para restaurantes nichados.
-* 🎯 **Conexão Assertiva:** O "match" perfeito entre a necessidade de saúde do cliente e o produto do estabelecimento.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-*(Edite esta seção com as tecnologias reais do seu projeto. Exemplos abaixo:)*
-
-* **Front-end:** React / React Native
-* * **Back-end:** Node.js
-* * **Banco de Dados:** Firebase
-* **Design/Prototipagem:** Figma
+- Frontend: React Native com Expo (SDK 51+)
+- Navegação: Expo Router (File-based routing)
+- Backend & Auth: Firebase (Authentication, Firestore e Storage)
+- Estilização: StyleSheet nativo
 
 ---
 
-## ⚙️ Funcionalidades Previstas
+## 🚀 Como Rodar o Projeto
 
-- [ ] Cadastro de Usuários (Consumidores e Estabelecimentos)
-- [ ] Geolocalização de restaurantes próximos
-- [ ] Filtros avançados (Vegano, Sem Glúten, Low Carb, etc.)
-- [ ] Marketplace e gestão de pedidos
-- [ ] Avaliação e Reviews de estabelecimentos
+Certifique-se de ter o Node.js instalado na sua máquina.
+
+### 1. Instalar dependências
+
+npm install
+
+### 2. ⚠️ Configuração de Segurança (Firebase Credentials)
+
+Por motivos de segurança, o arquivo firebase-credentials.json localizado na pasta fitway-backend NÃO está incluído no repositório (está no .gitignore).
+
+O projeto não funcionará sem esse arquivo.
+
+### 3. Iniciar a aplicação
+
+npm start
+
+Após rodar o comando:
+
+- Pressione "a" para Android
+- Pressione "i" para iOS
+- Pressione "w" para Web
+- Ou escaneie o QR Code com o Expo Go
 
 ---
 
-## 🤝 Como Contribuir
+## 📂 Estrutura de Pastas
 
-Contribuições são sempre bem-vindas! Se você deseja contribuir com o projeto:
-
-1.  Faça um **Fork** do projeto.
-2.  Crie uma Branch para sua Feature (`git checkout -b feature/NovaFeature`).
-3.  Faça o **Commit** das suas mudanças (`git commit -m 'Adicionando uma nova feature'`).
-4.  Faça o **Push** para a Branch (`git push origin feature/NovaFeature`).
-5.  Abra um **Pull Request**.
+- app/ → Rotas (Expo Router)
+- src/controllers/ → Lógica de negócio
+- src/models/ → Dados e integração com banco
+- src/views/ → Interface (UI)
+- src/config/ → Configurações (Firebase)
+- components/ → Componentes reutilizáveis
+- fitway-backend/ → Backend Node.js + credenciais
 
 ---
 
-
-<p align="center">
-  Desenvolvido com 💚 pela equipe DevSystem
-</p>
-
+Desenvolvido pela equipe DevSystem 💚
