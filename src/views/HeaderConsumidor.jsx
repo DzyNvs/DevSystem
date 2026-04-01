@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // 🚀 Mantido da develop
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHeaderConsumidorController } from '../controllers/useHeaderConsumidorController';
@@ -8,7 +8,7 @@ const logo = require('../../assets/images/logo.png');
 
 export function HeaderConsumidor() {
   const ctrl = useHeaderConsumidorController();
-  const router = useRouter(); // 🚀 Mantido da develop
+  const router = useRouter();
 
   return (
     <View style={styles.headerContainer}>
@@ -25,7 +25,7 @@ export function HeaderConsumidor() {
 
       <View style={styles.rightSection}>
         
-        {/* 🚀 NOSSO NOVO BOTÃO DE ENDEREÇO DA DEVELOP */}
+        {/* Botão de endereço */}
         <TouchableOpacity 
           style={styles.addressInfo} 
           onPress={() => router.push('/escolher-endereco')}
@@ -37,14 +37,26 @@ export function HeaderConsumidor() {
           </View>
         </TouchableOpacity>
 
-        {/* Informações do Usuário */}
-        <TouchableOpacity style={styles.userInfo}>
-          <Ionicons name="person-outline" size={20} color="#005F02" />
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.welcomeText}>Boas vindas!</Text>
-            <Text style={styles.loginText} numberOfLines={1}>{ctrl.nomeUsuario}</Text>
-          </View>
-        </TouchableOpacity>
+        {/* Informações do Usuário com Dropdown */}
+        <View style={{ position: 'relative', zIndex: 999 }}>
+          <TouchableOpacity style={styles.userInfo} onPress={() => ctrl.setMenuAberto(!ctrl.menuAberto)}>
+            <Ionicons name="person-outline" size={20} color="#005F02" />
+            <View style={{ marginLeft: 8 }}>
+              <Text style={styles.welcomeText}>Boas vindas!</Text>
+              <Text style={styles.loginText} numberOfLines={1}>{ctrl.nomeUsuario}</Text>
+            </View>
+            <Ionicons name="chevron-down-outline" size={16} color="#333" style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
+
+          {ctrl.menuAberto && (
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
+                <Ionicons name="log-out-outline" size={18} color="#E53935" />
+                <Text style={styles.dropdownText}>Sair</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         
         {/* Carrinho */}
         <TouchableOpacity style={styles.cartInfo} onPress={ctrl.irParaCarrinho}>
@@ -73,19 +85,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2E3BB',
     borderBottomWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
+    zIndex: 10,
   },
   leftSection: { flexDirection: 'row', alignItems: 'center' },
-  
-  // Estilos mesclados da Layout
   logoImg: { width: 110, height: 55 },
   navLinks: { flexDirection: 'row', marginLeft: 45, gap: 45 },
   navText: { fontFamily: 'Nunito', fontSize: 16, color: '#2A2D34', fontWeight: '500' },
   navTextActive: { color: '#005F02', fontWeight: 'bold' },
-  
-  // Pegamos o gap: 25 da develop pra caber o botão novo
   rightSection: { flexDirection: 'row', alignItems: 'center', gap: 25 }, 
-  
-  // 🚀 Estilos do novo botão de endereço (Adicionei a fonte Nunito pra manter o padrão da Layout)
   addressInfo: { 
     flexDirection: 'row', 
     alignItems: 'center',
@@ -95,13 +102,38 @@ const styles = StyleSheet.create({
   },
   addressLabel: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
   addressText: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#93BD57', maxWidth: 140 },
-
-  // Estilos atualizados da Layout
-  userInfo: { flexDirection: 'row', alignItems: 'center', marginRight: 45 },
+  userInfo: { flexDirection: 'row', alignItems: 'center' },
   welcomeText: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
   loginText: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333', maxWidth: 120 },
-  
   cartInfo: { flexDirection: 'row', alignItems: 'center' },
   cartValue: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333' },
   cartItems: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+    minWidth: 140,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dropdownText: {
+    fontFamily: 'Nunito',
+    fontSize: 14,
+    color: '#E53935',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
 });

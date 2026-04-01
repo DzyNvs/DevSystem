@@ -1,25 +1,24 @@
-import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { auth, db } from '../config/firebase';
+import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { auth, db } from '../config/firebase';
 
 export const useHeaderRestauranteController = () => {
-  const [nomeRestaurante, setNomeRestaurante] = useState("Carregando..."); 
+  const [nomeRestaurante, setNomeRestaurante] = useState("Carregando...");
+  const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
-    // Função para buscar o nome de quem logou
     const carregarNomeRestaurante = async () => {
       const user = auth.currentUser;
       
       if (user) {
         try {
-          // Busca o documento deste restaurante específico no Firebase
           const docRef = doc(db, 'restaurantes', user.uid);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
             const dados = docSnap.data();
-            // Pega o nome fantasia (ou "Meu Restaurante" caso esteja vazio)
             setNomeRestaurante(dados.nome_fantasia || "Meu Restaurante");
           }
         } catch (error) {
@@ -35,11 +34,25 @@ export const useHeaderRestauranteController = () => {
   }, []);
 
   const handlePerfilClick = () => {
+    setMenuAberto(false);
     router.push('/restaurante/perfil'); 
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setMenuAberto(false);
+      router.replace('/');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
   };
 
   return { 
     nomeRestaurante, 
-    handlePerfilClick
+    handlePerfilClick,
+    menuAberto,
+    setMenuAberto,
+    handleLogout
   };
 };

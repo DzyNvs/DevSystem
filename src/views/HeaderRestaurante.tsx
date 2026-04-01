@@ -16,23 +16,38 @@ export function HeaderRestaurante() {
         <Image source={logo} style={styles.logo} resizeMode="contain" />
       </View>
 
-      {/* Direita: Nome do Restaurante logado, Notificações e Perfil */}
+      {/* Direita: Nome do Restaurante, Notificações e Dropdown */}
       <View style={styles.actionsContainer}>
-        
-        <Text style={styles.nomeRestauranteText} numberOfLines={1}>
-          Olá, {ctrl.nomeRestaurante}
-        </Text>
 
-        {/* Sino de Notificações com a "bolinha" vermelha de aviso */}
+        {/* Sino de Notificações */}
         <TouchableOpacity style={styles.iconButton} onPress={() => alert('Sem novas notificações!')}>
           <Ionicons name="notifications-outline" size={24} color="#005F02" />
           <View style={styles.badge} />
         </TouchableOpacity>
 
-        {/* Botão de Perfil */}
-        <TouchableOpacity style={styles.iconButton} onPress={ctrl.handlePerfilClick}>
-          <Ionicons name="person-circle-outline" size={28} color="#005F02" />
-        </TouchableOpacity>
+        {/* Nome + Dropdown de Perfil/Logout */}
+        <View style={{ position: 'relative', zIndex: 999 }}>
+          <TouchableOpacity style={styles.userDropdown} onPress={() => ctrl.setMenuAberto(!ctrl.menuAberto)}>
+            <Ionicons name="person-circle-outline" size={28} color="#005F02" />
+            <Text style={styles.nomeRestauranteText} numberOfLines={1}>
+              Olá, {ctrl.nomeRestaurante}
+            </Text>
+            <Ionicons name="chevron-down-outline" size={16} color="#333" />
+          </TouchableOpacity>
+
+          {ctrl.menuAberto && (
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handlePerfilClick}>
+                <Ionicons name="person-outline" size={18} color="#005F02" />
+                <Text style={[styles.dropdownText, { color: '#333' }]}>Perfil</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
+                <Ionicons name="log-out-outline" size={18} color="#E53935" />
+                <Text style={styles.dropdownText}>Sair</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         
       </View>
     </View>
@@ -69,7 +84,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333', 
-    marginRight: 8,
     maxWidth: 150, 
   },
   iconButton: {
@@ -86,5 +100,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#E53935', 
     borderWidth: 2,
     borderColor: '#F2E3BB', 
-  }
+  },
+  userDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+    minWidth: 140,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dropdownText: {
+    fontFamily: 'Nunito',
+    fontSize: 14,
+    color: '#E53935',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
 });

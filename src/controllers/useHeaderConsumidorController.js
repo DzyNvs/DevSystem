@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../config/firebase';
@@ -6,6 +7,7 @@ import { useCarrinhoStore } from './useCarrinhoStore';
 
 export const useHeaderConsumidorController = () => {
   const [nomeUsuario, setNomeUsuario] = useState("Carregando...");
+  const [menuAberto, setMenuAberto] = useState(false);
   
   // Puxa a lista de itens direto da memória global (sem precisar de Provider)
   const itens = useCarrinhoStore((state) => state.itens);
@@ -50,5 +52,15 @@ export const useHeaderConsumidorController = () => {
     router.push('/consumidor/carrinho'); 
   };
 
-  return { nomeUsuario, totalItens, valorTotal, irParaCarrinho };
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setMenuAberto(false);
+      router.replace('/');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
+
+  return { nomeUsuario, totalItens, valorTotal, irParaCarrinho, menuAberto, setMenuAberto, handleLogout };
 };
