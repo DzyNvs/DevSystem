@@ -1,13 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, ImageBackground, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+// 👉 Importei o componente Image aqui em cima!
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { ActivityIndicator, FlatList, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// 👉 Importando das Views e não da pasta components
+import { useRestauranteDetalhesController } from '../controllers/useRestauranteDetalhesController';
 import { HeaderConsumidor } from './HeaderConsumidor';
 import { PratoCard } from './PratoCard';
 import { PratoDetalhesModal } from './PratoDetalhesModal';
-import { useRestauranteDetalhesController } from '../controllers/useRestauranteDetalhesController';
 
 export function RestauranteDetalhesScreen() {
   const ctrl = useRestauranteDetalhesController();
@@ -49,6 +48,15 @@ export function RestauranteDetalhesScreen() {
           
           <View style={styles.bannerOverlay}>
             <View style={styles.restaurantInfoCard}>
+              
+              {/* 👉 AQUI ENTRA A LOGO ESTILO IFOOD */}
+              {ctrl.restaurante?.logo && (
+                <Image 
+                  source={{ uri: ctrl.restaurante.logo }} 
+                  style={styles.logoRestaurante} 
+                />
+              )}
+
               <View style={styles.headerRow}>
                 <Text style={styles.nomeRestaurante} numberOfLines={1}>
                   {ctrl.restaurante?.nome_fantasia || ctrl.restaurante?.razao_social || 'Restaurante'}
@@ -118,7 +126,39 @@ const styles = StyleSheet.create({
   bannerImage: { width: '100%', height: 280, justifyContent: 'flex-end', alignItems: 'center' },
   backButton: { position: 'absolute', top: 20, left: 20, backgroundColor: 'rgba(0,0,0,0.4)', padding: 8, borderRadius: 24, zIndex: 10 },
   bannerOverlay: { alignItems: 'center', width: '100%', paddingHorizontal: 16 },
-  restaurantInfoCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, width: '100%', maxWidth: 800, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, marginBottom: -40, zIndex: 5 },
+  
+  restaurantInfoCard: { 
+    backgroundColor: '#FFF', 
+    borderRadius: 12, 
+    padding: 16, 
+    width: '100%', 
+    maxWidth: 800, 
+    elevation: 8, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 10, 
+    marginBottom: -40, 
+    zIndex: 5 
+  },
+  
+  // 👉 NOVO ESTILO: A mágica do CSS pra fazer a logo do iFood
+  logoRestaurante: {
+    width: 76,
+    height: 76,
+    borderRadius: 38, // Metade da largura para garantir que fique um círculo perfeito
+    borderWidth: 3,
+    borderColor: '#FFF', // Bordinha branca
+    backgroundColor: '#FFF',
+    marginTop: -54, // O segredo tá aqui: puxa a imagem pra cima, invadindo a capa
+    marginBottom: 8, // Dá um respiro antes do nome do restaurante
+    elevation: 4, // Sombreado pra destacar
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   nomeRestaurante: { fontSize: 24, fontWeight: 'bold', color: '#111', flex: 1, marginRight: 16 },
   avaliacaoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9C4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, gap: 4 },

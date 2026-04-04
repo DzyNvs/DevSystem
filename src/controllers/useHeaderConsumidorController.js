@@ -9,8 +9,9 @@ export const useHeaderConsumidorController = () => {
   const [nomeUsuario, setNomeUsuario] = useState("Carregando...");
   const [menuAberto, setMenuAberto] = useState(false);
   
-  // Puxa a lista de itens direto da memória global (sem precisar de Provider)
+  // Puxa a lista de itens e a função de abrir o drawer direto da memória global
   const itens = useCarrinhoStore((state) => state.itens);
+  const abrirDrawer = useCarrinhoStore((state) => state.abrirDrawer);
 
   // Calcula os totais em tempo real
   const totalItens = itens.reduce((acc, item) => acc + item.qtd, 0);
@@ -49,7 +50,8 @@ export const useHeaderConsumidorController = () => {
       alert("Seu carrinho está vazio!");
       return;
     }
-    router.push('/consumidor/carrinho'); 
+    // Agora ele só abre a gaveta lateral
+    abrirDrawer(); 
   };
 
   const handleLogout = async () => {

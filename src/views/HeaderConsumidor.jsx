@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHeaderConsumidorController } from '../controllers/useHeaderConsumidorController';
+// ⚠️ Importando a gaveta nova (Ajuste o caminho se precisar)
+import { CarrinhoDrawer } from './CarrinhoDrawer';
 
 const logo = require('../../assets/images/logo.png');
 
@@ -10,68 +12,74 @@ export function HeaderConsumidor() {
   const ctrl = useHeaderConsumidorController();
   const router = useRouter();
 
+  // Note o uso do fragmento <> no início do return para agrupar o Header e a Gaveta
   return (
-    <View style={styles.headerContainer}>
-      <View style={styles.leftSection}>
-        <Image source={logo} style={styles.logoImg} resizeMode="contain" />
-        
-        <View style={styles.navLinks}>
-          <TouchableOpacity><Text style={[styles.navText, styles.navTextActive]}>Início</Text></TouchableOpacity>
-          <TouchableOpacity><Text style={styles.navText}>Restaurantes</Text></TouchableOpacity>
-          <TouchableOpacity><Text style={styles.navText}>Drops</Text></TouchableOpacity>
-          <TouchableOpacity><Text style={styles.navText}>Sobre nós</Text></TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.rightSection}>
-        
-        {/* Botão de endereço */}
-        <TouchableOpacity 
-          style={styles.addressInfo} 
-          onPress={() => router.push('/escolher-endereco')}
-        >
-          <Ionicons name="location-outline" size={24} color="#93BD57" />
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.addressLabel}>Entregar em</Text>
-            <Text style={styles.addressText} numberOfLines={1}>Escolher endereço</Text>
+    <>
+      <View style={styles.headerContainer}>
+        <View style={styles.leftSection}>
+          <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+          
+          <View style={styles.navLinks}>
+            <TouchableOpacity><Text style={[styles.navText, styles.navTextActive]}>Início</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.navText}>Restaurantes</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.navText}>Drops</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.navText}>Sobre nós</Text></TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
 
-        {/* Informações do Usuário com Dropdown */}
-        <View style={{ position: 'relative', zIndex: 999 }}>
-          <TouchableOpacity style={styles.userInfo} onPress={() => ctrl.setMenuAberto(!ctrl.menuAberto)}>
-            <Ionicons name="person-outline" size={20} color="#005F02" />
+        <View style={styles.rightSection}>
+          
+          {/* Botão de endereço */}
+          <TouchableOpacity 
+            style={styles.addressInfo} 
+            onPress={() => router.push('/escolher-endereco')}
+          >
+            <Ionicons name="location-outline" size={24} color="#93BD57" />
             <View style={{ marginLeft: 8 }}>
-              <Text style={styles.welcomeText}>Boas vindas!</Text>
-              <Text style={styles.loginText} numberOfLines={1}>{ctrl.nomeUsuario}</Text>
+              <Text style={styles.addressLabel}>Entregar em</Text>
+              <Text style={styles.addressText} numberOfLines={1}>Escolher endereço</Text>
             </View>
-            <Ionicons name="chevron-down-outline" size={16} color="#333" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
 
-          {ctrl.menuAberto && (
-            <View style={styles.dropdownMenu}>
-              <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
-                <Ionicons name="log-out-outline" size={18} color="#E53935" />
-                <Text style={styles.dropdownText}>Sair</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        
-        {/* Carrinho */}
-        <TouchableOpacity style={styles.cartInfo} onPress={ctrl.irParaCarrinho}>
-          <Ionicons name="bag-handle-outline" size={24} color="#005F02" />
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.cartValue}>
-              R$ {ctrl.valorTotal.toFixed(2).replace('.', ',')}
-            </Text>
-            <Text style={styles.cartItems}>
-              {ctrl.totalItens} {ctrl.totalItens === 1 ? 'item' : 'itens'}
-            </Text>
+          {/* Informações do Usuário com Dropdown */}
+          <View style={{ position: 'relative', zIndex: 999 }}>
+            <TouchableOpacity style={styles.userInfo} onPress={() => ctrl.setMenuAberto(!ctrl.menuAberto)}>
+              <Ionicons name="person-outline" size={20} color="#005F02" />
+              <View style={{ marginLeft: 8 }}>
+                <Text style={styles.welcomeText}>Boas vindas!</Text>
+                <Text style={styles.loginText} numberOfLines={1}>{ctrl.nomeUsuario}</Text>
+              </View>
+              <Ionicons name="chevron-down-outline" size={16} color="#333" style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+
+            {ctrl.menuAberto && (
+              <View style={styles.dropdownMenu}>
+                <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
+                  <Ionicons name="log-out-outline" size={18} color="#E53935" />
+                  <Text style={styles.dropdownText}>Sair</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        </TouchableOpacity>
+          
+          {/* Carrinho */}
+          <TouchableOpacity style={styles.cartInfo} onPress={ctrl.irParaCarrinho}>
+            <Ionicons name="bag-handle-outline" size={24} color="#005F02" />
+            <View style={{ marginLeft: 8 }}>
+              <Text style={styles.cartValue}>
+                R$ {ctrl.valorTotal.toFixed(2).replace('.', ',')}
+              </Text>
+              <Text style={styles.cartItems}>
+                {ctrl.totalItens} {ctrl.totalItens === 1 ? 'item' : 'itens'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+
+      {/* A Gaveta renderizada aqui. Ela é invisível até ser acionada */}
+      <CarrinhoDrawer />
+    </>
   );
 }
 
