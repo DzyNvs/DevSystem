@@ -1,23 +1,44 @@
-import { useState } from 'react';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCarrinhoStore } from './useCarrinhoStore';
-import { PedidoModel } from '../models/PedidoModel';
+import { useEffect, useState } from 'react';
 import { auth } from '../config/firebase';
+import { PedidoModel } from '../models/PedidoModel';
+import { RestauranteModel } from '../models/RestauranteModel'; // 👉 Importando o model do restaurante
+import { useCarrinhoStore } from './useCarrinhoStore';
 
 export const usePagamentoController = () => {
-  // 👉 Buscando do Zustand do jeito mais seguro para evitar undefined
   const itens = useCarrinhoStore((state) => state.itens) || [];
-  const idRestauranteAtual = useCarrinhoStore((state) => state.idRestauranteAtual);
+  const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId); // 👉 Cuidado: no seu store está salvo como restauranteId
   const limparCarrinho = useCarrinhoStore((state) => state.limparCarrinho);
   
   const [carregando, setCarregando] = useState(false);
+  const [carregandoOpcoes, setCarregandoOpcoes] = useState(true);
+  
+  // 👉 Novos estados para gerenciar a escolha do cliente
+  const [tipoPagamento, setTipoPagamento] = useState('online'); // 'online' ou 'entrega'
+  const [formaPagamentoEntrega, setFormaPagamentoEntrega] = useState(null);
+  const [opcoesRestaurante, setOpcoesRestaurante] = useState({});
 
   const MP_ACCESS_TOKEN = "APP_USR-8693224672518424-032321-beab53776818d54b1f19d0426dcbe234-3287488807"; 
 
   const subtotal = itens.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
   const taxaEntrega = 5.00; 
   const totalFinal = subtotal + taxaEntrega;
+
+  // 👉 Busca as opções de pagamento liberadas pelo restaurante no Firebase
+  useEffect(() => {
+    if (idRestauranteAtual) {
+      RestauranteModel.buscarPorId(idRestauranteAtual)
+        .then(dados => {
+          if (dados && dados.pagamentos) {
+            setOpcoesRestaurante(dados.pagamentos);
+          }
+        })
+        .finally(() => setCarregandoOpcoes(false));
+    } else {
+      setCarregandoOpcoes(false);
+    }
+  }, [idRestauranteAtual]);
 
   const gerarPagamentoMercadoPago = async () => {
     try {
@@ -46,11 +67,7 @@ export const usePagamentoController = () => {
         },
         body: JSON.stringify({
           items: mpItems,
-          back_urls: {
-            success: "https://seusite.com/sucesso", 
-            failure: "https://seusite.com/falha",
-            pending: "https://seusite.com/pendente"
-          },
+          back_urls: { success: "https://seusite.com/sucesso", failure: "https://seusite.com/falha", pending: "https://seusite.com/pendente" },
           auto_return: "approved",
         })
       });
@@ -67,37 +84,46 @@ export const usePagamentoController = () => {
   const finalizarPedido = async () => {
     if (itens.length === 0) return alert("Seu carrinho está vazio!");
     
+    // Trava se o cara selecionou pagamento na entrega mas não escolheu a opção
+    if (tipoPagamento === 'entrega' && !formaPagamentoEntrega) {
+      return alert("Por favor, selecione como você vai pagar na entrega!");
+    }
+    
     setCarregando(true);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuário não logado");
 
-      // 1. Gera o link no Mercado Pago
-      const linkPagamento = await gerarPagamentoMercadoPago();
+      let linkPagamento = '';
+      
+      // 👉 Só gera Mercado Pago se o cara escolheu pagar online
+      if (tipoPagamento === 'online') {
+        linkPagamento = await gerarPagamentoMercadoPago();
+      }
 
       // 2. Salva o Pedido no Firebase
       const dadosPedido = {
         id_restaurante: idRestauranteAtual,
-        id_consumidor: user.uid, // Usa o UID real de quem está logado
+        id_consumidor: user.uid, 
         itens: itens,
         subtotal,
         taxa_entrega: taxaEntrega,
         total_final: totalFinal,
-        link_pagamento: linkPagamento
+        link_pagamento: linkPagamento,
+        tipo_pagamento: tipoPagamento,
+        forma_pagamento: tipoPagamento === 'online' ? 'mercado_pago' : formaPagamentoEntrega
       };
 
       await PedidoModel.criarPedido(dadosPedido);
-
-      // 3. Limpa o carrinho
       limparCarrinho();
 
-      // 4. Abre o navegador com o checkout do Mercado Pago
-      if (linkPagamento) {
+      // 4. Abre o navegador SÓ SE for Mercado Pago
+      if (tipoPagamento === 'online' && linkPagamento) {
         await WebBrowser.openBrowserAsync(linkPagamento);
       }
 
       alert("Pedido gerado com sucesso!");
-      router.replace('/home-consumidor-screen');
+      router.replace('/home-consumidor-screen'); // Ajuste o nome da sua rota inicial aqui
 
     } catch (error) {
       alert("Ocorreu um erro ao processar seu pedido.");
@@ -107,5 +133,17 @@ export const usePagamentoController = () => {
     }
   };
 
-  return { subtotal, taxaEntrega, totalFinal, finalizarPedido, carregando };
+  return { 
+    subtotal, 
+    taxaEntrega, 
+    totalFinal, 
+    finalizarPedido, 
+    carregando,
+    carregandoOpcoes,
+    tipoPagamento,
+    setTipoPagamento,
+    formaPagamentoEntrega,
+    setFormaPagamentoEntrega,
+    opcoesRestaurante
+  };
 };

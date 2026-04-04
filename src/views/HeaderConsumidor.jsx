@@ -54,10 +54,25 @@ export function HeaderConsumidor() {
 
             {ctrl.menuAberto && (
               <View style={styles.dropdownMenu}>
+                
+                {/* 👉 NOVA OPÇÃO AQUI: Meus Pedidos */}
+                <TouchableOpacity 
+                  style={styles.dropdownItem} 
+                  onPress={() => {
+                    ctrl.setMenuAberto(false); // Fecha o menu
+                    router.push('/consumidor/meus-pedidos'); // Vai pra tela de pedidos
+                  }}
+                >
+                  <Ionicons name="receipt-outline" size={18} color="#005F02" />
+                  <Text style={[styles.dropdownText, { color: '#005F02' }]}>Meus Pedidos</Text>
+                </TouchableOpacity>
+
+                {/* Botão de Sair */}
                 <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
                   <Ionicons name="log-out-outline" size={18} color="#E53935" />
                   <Text style={styles.dropdownText}>Sair</Text>
                 </TouchableOpacity>
+                
               </View>
             )}
           </View>

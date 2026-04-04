@@ -195,4 +195,5 @@ const styles = StyleSheet.create({
   btnFinalizar: { backgroundColor: '#93BD57', padding: 15, borderRadius: 8, alignItems: 'center' },
   btnFinalizarInativo: { backgroundColor: '#CCC' },
   btnFinalizarText: { fontFamily: 'Nunito', fontSize: 18, fontWeight: 'bold', color: '#FFF' },
+
 });

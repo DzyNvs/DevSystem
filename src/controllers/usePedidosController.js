@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { PedidoModel } from '../models/PedidoModel';
-import { auth, db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { auth, db } from '../config/firebase';
+import { PedidoModel } from '../models/PedidoModel';
 
 export const usePedidosController = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -9,7 +9,6 @@ export const usePedidosController = () => {
   const [idRestauranteLogado, setIdRestauranteLogado] = useState(null);
 
   useEffect(() => {
-    // Primeiro descobre quem tá logado, depois carrega os pedidos
     identificarRestauranteECarregar();
   }, []);
 
@@ -23,7 +22,6 @@ export const usePedidosController = () => {
         return;
       }
 
-      // Vai no banco pegar o id_restaurante (ex: rest_123456) salvo no documento desse usuário
       const docRef = doc(db, 'restaurantes', user.uid);
       const docSnap = await getDoc(docRef);
 
@@ -31,8 +29,9 @@ export const usePedidosController = () => {
         const meuIdRestaurante = docSnap.data().id_restaurante;
         setIdRestauranteLogado(meuIdRestaurante);
         
-        // Agora sim busca os pedidos usando o ID correto!
         const lista = await PedidoModel.buscarPedidosDoRestaurante(meuIdRestaurante);
+        // Ordena para os mais recentes ficarem no topo
+        lista.sort((a, b) => (b.data_criacao?.toDate() || 0) - (a.data_criacao?.toDate() || 0));
         setPedidos(lista);
       } else {
         alert("ID do Restaurante não encontrado no banco.");
@@ -45,14 +44,27 @@ export const usePedidosController = () => {
     }
   };
 
-  // Função para você testar a criação de pedidos (pode chamar isso num botão na tela depois se quiser testar)
+  // 👉 NOVA FUNÇÃO: Altera o status e atualiza a lista local
+  const alterarStatus = async (idPedido, novoStatus) => {
+    try {
+      await PedidoModel.atualizarStatusPedido(idPedido, novoStatus);
+      
+      // Atualiza o pedido na tela na mesma hora, sem recarregar o banco
+      setPedidos(pedidos.map(p => 
+        p.id === idPedido ? { ...p, status: novoStatus } : p
+      ));
+    } catch (error) {
+      alert("Ocorreu um erro ao mudar o status.");
+    }
+  };
+
   const gerarPedidoTeste = async () => {
     if (!idRestauranteLogado) return;
     setCarregando(true);
     try {
       await PedidoModel.criarPedidoSimulado(idRestauranteLogado);
       alert("Pedido teste criado! Recarregando lista...");
-      await identificarRestauranteECarregar(); // Recarrega a tela
+      await identificarRestauranteECarregar(); 
     } catch (error) {
       alert("Erro ao criar pedido de teste.");
       setCarregando(false);
@@ -63,6 +75,7 @@ export const usePedidosController = () => {
     pedidos,
     carregando,
     carregarPedidos: identificarRestauranteECarregar,
-    gerarPedidoTeste // Exportando a função de teste
+    gerarPedidoTeste,
+    alterarStatus // 👉 Não esqueça de exportar a função aqui
   };
 };
