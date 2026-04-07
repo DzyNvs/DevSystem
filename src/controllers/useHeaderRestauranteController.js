@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../config/firebase';
@@ -9,9 +9,7 @@ export const useHeaderRestauranteController = () => {
   const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
-    const carregarNomeRestaurante = async () => {
-      const user = auth.currentUser;
-      
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const docRef = doc(db, 'restaurantes', user.uid);
@@ -20,6 +18,8 @@ export const useHeaderRestauranteController = () => {
           if (docSnap.exists()) {
             const dados = docSnap.data();
             setNomeRestaurante(dados.nome_fantasia || "Meu Restaurante");
+          } else {
+            setNomeRestaurante("Restaurante");
           }
         } catch (error) {
           console.error("Erro ao buscar nome do restaurante:", error);
@@ -28,9 +28,9 @@ export const useHeaderRestauranteController = () => {
       } else {
         setNomeRestaurante("Visitante");
       }
-    };
+    });
 
-    carregarNomeRestaurante();
+    return () => unsubscribe();
   }, []);
 
   const handlePerfilClick = () => {

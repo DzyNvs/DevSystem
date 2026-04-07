@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../config/firebase';
@@ -9,18 +9,14 @@ export const useHeaderConsumidorController = () => {
   const [nomeUsuario, setNomeUsuario] = useState("Carregando...");
   const [menuAberto, setMenuAberto] = useState(false);
   
-  // Puxa a lista de itens e a função de abrir o drawer direto da memória global
   const itens = useCarrinhoStore((state) => state.itens);
   const abrirDrawer = useCarrinhoStore((state) => state.abrirDrawer);
 
-  // Calcula os totais em tempo real
   const totalItens = itens.reduce((acc, item) => acc + item.qtd, 0);
   const valorTotal = itens.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
 
   useEffect(() => {
-    const carregarNomeUsuario = async () => {
-      const user = auth.currentUser;
-      
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const docRef = doc(db, 'consumidores', user.uid);
@@ -40,9 +36,9 @@ export const useHeaderConsumidorController = () => {
       } else {
         setNomeUsuario("Visitante");
       }
-    };
+    });
 
-    carregarNomeUsuario();
+    return () => unsubscribe();
   }, []);
 
   const irParaCarrinho = () => {
@@ -50,7 +46,6 @@ export const useHeaderConsumidorController = () => {
       alert("Seu carrinho está vazio!");
       return;
     }
-    // Agora ele só abre a gaveta lateral
     abrirDrawer(); 
   };
 
