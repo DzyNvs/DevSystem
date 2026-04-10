@@ -76,14 +76,19 @@ export default function CompletarCadastroScreen() {
     setCarregando(true);
 
     try {
+      // 👉 GERA O ID DO CONSUMIDOR 
+      const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+      const id_consumidor_gerado = `cons_${numeroAleatorio}`;
+
       await setDoc(doc(db, 'consumidores', uid), {
         nome: nome,
         email: email,
         cpf: cpf,
-        dataNascimento: dataNascimento,
+        data_nascimento: dataNascimento, // Ajustado para snake_case
         telefone: telefone, 
         tipoConta: 'consumidor', 
-        dataCriacao: new Date()
+        id_consumidor: id_consumidor_gerado, // 👉 AQUI ESTÁ A CORREÇÃO!
+        data_criacao: new Date() // Ajustado para snake_case
       });
 
       alert("Cadastro finalizado com sucesso! 🥗");

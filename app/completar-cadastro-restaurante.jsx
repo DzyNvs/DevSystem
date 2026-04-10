@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons'; // <-- ADICIONADO: Importação do ícone
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
@@ -52,13 +52,18 @@ export default function CompletarCadastroRestauranteScreen() {
     setCarregando(true);
 
     try {
+      // 👉 GERA O ID DO RESTAURANTE (Mesma lógica do cadastro normal)
+      const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+      const id_restaurante_gerado = `rest_${numeroAleatorio}`;
+
       await setDoc(doc(db, 'restaurantes', uid), {
-        nomeFantasia: nomeFantasia,
-        razaoSocial: razaoSocial,
-        email: email,
+        nome_fantasia: nomeFantasia, 
+        razao_social: razaoSocial,   
+        email_rest: email,           
         cnpj: cnpj,
         telefone: telefone, 
         tipoConta: 'restaurante', 
+        id_restaurante: id_restaurante_gerado, // 👉 AQUI ESTÁ A CORREÇÃO!
         dataCriacao: new Date()
       });
 
@@ -76,7 +81,6 @@ export default function CompletarCadastroRestauranteScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* --- NOVO: BOTÃO DE VOLTAR --- */}
         <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#333" />
           <Text style={styles.textoVoltar}>Voltar</Text>
@@ -144,10 +148,8 @@ export default function CompletarCadastroRestauranteScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   container: { flex: 1, padding: 30, justifyContent: 'center', maxWidth: 500, alignSelf: 'center', width: '100%' },
-  /* --- ESTILOS DO BOTÃO VOLTAR --- */
   botaoVoltar: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 20 },
   textoVoltar: { fontSize: 16, color: '#333', marginLeft: 8, fontWeight: '600' },
-  /* ------------------------------- */
   titulo: { fontSize: 32, fontWeight: 'bold', color: '#93BD57', marginBottom: 10, textAlign: 'center' },
   subtitulo: { fontSize: 16, color: '#666', marginBottom: 30, textAlign: 'center' },
   label: { fontSize: 15, fontWeight: '600', marginBottom: 6, color: '#333' },
