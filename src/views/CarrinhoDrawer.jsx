@@ -131,8 +131,17 @@ export function CarrinhoDrawer() {
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, flexDirection: 'row' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  // 👉 Aqui está o segredo: o overlay cobre a tela toda com fundo invisível, 
+  // e o backdrop aplica a transparência!
+  overlay: { 
+    flex: 1, 
+    flexDirection: 'row',
+    backgroundColor: 'transparent' // Garante que a raiz do modal não pinte tudo de preto
+  },
+  backdrop: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // 0.4 = 40% escuro (um pouco mais leve que o 0.5)
+  },
   drawer: {
     width: '100%',
     maxWidth: 420,
@@ -195,5 +204,4 @@ const styles = StyleSheet.create({
   btnFinalizar: { backgroundColor: '#93BD57', padding: 15, borderRadius: 8, alignItems: 'center' },
   btnFinalizarInativo: { backgroundColor: '#CCC' },
   btnFinalizarText: { fontFamily: 'Nunito', fontSize: 18, fontWeight: 'bold', color: '#FFF' },
-
 });

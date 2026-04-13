@@ -29,9 +29,11 @@ export function HomeRestauranteScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Resumo de hoje</Text>
+        <Text style={styles.sectionTitle}>
+          Resumo de hoje {ctrl.nomeRestaurante ? `- ${ctrl.nomeRestaurante}` : ''}
+        </Text>
+        
         <View style={styles.metricasRow}>
-          
           <View style={styles.metricaCard}>
             <MaterialCommunityIcons name="ticket-confirmation-outline" size={24} color="#555" />
             <Text style={styles.metricaValor}>
@@ -59,8 +61,15 @@ export function HomeRestauranteScreen() {
         <View style={styles.gridContainer}>
           
           <TouchableOpacity style={styles.gridCard} onPress={ctrl.irParaPedidos}>
-            <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
+            {/* 👉 BOTÃO COM A BOLINHA VERMELHA DE VOLTA */}
+            <View style={[styles.iconBox, { backgroundColor: '#E8F5E9', position: 'relative' }]}>
               <Ionicons name="receipt-outline" size={28} color="#2e7d32" />
+              
+              {ctrl.pedidosPendentes > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{ctrl.pedidosPendentes}</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.gridTitle}>Pedidos</Text>
             <Text style={styles.gridDesc}>Acompanhe o fluxo</Text>
@@ -105,100 +114,40 @@ export function HomeRestauranteScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: '#F7F6F2', 
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  content: { 
-    padding: 20,
-    paddingBottom: 40,
-  },
+  mainContainer: { flex: 1, backgroundColor: '#F7F6F2' },
+  scrollContainer: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
   
-  statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
-  },
+  statusContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 24, borderWidth: 1, borderColor: '#EAEAEA' },
   statusTitulo: { fontSize: 14, color: '#666', marginBottom: 4 },
   statusTexto: { fontSize: 16, fontWeight: 'bold' },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  metricasRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-    gap: 10,
-  },
   
-  // METRICAS COM A MESMA BORDA E FUNDO BRANCO
-  metricaCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
-  },
-  metricaValor: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 8,
-  },
-  metricaLabel: {
-    fontSize: 12,
-    color: '#777',
-    marginTop: 2,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12, marginLeft: 4 },
+  metricasRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30, gap: 10 },
+  metricaCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA' },
+  metricaValor: { fontSize: 20, fontWeight: 'bold', color: '#333', marginTop: 8 },
+  metricaLabel: { fontSize: 12, color: '#777', marginTop: 2 },
   
-  // GRID CARDS 
-  gridCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'flex-start',
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
+  gridCard: { width: '48%', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, alignItems: 'flex-start', marginBottom: 10, borderWidth: 1, borderColor: '#EAEAEA' },
+  iconBox: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  gridTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+  gridDesc: { fontSize: 12, color: '#777' },
+
+  // 👉 Estilos da bolinha vermelha
+  badge: { 
+    position: 'absolute', 
+    top: -4, 
+    right: -4, 
+    backgroundColor: '#E53935', 
+    minWidth: 20, 
+    height: 20, 
+    borderRadius: 10, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 2, 
+    borderColor: '#FFF', 
+    paddingHorizontal: 4 
   },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  gridTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  gridDesc: {
-    fontSize: 12,
-    color: '#777',
-  }
+  badgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' }
 });

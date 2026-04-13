@@ -1,15 +1,25 @@
 import { router } from 'expo-router';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { auth, db } from '../config/firebase';
 
 export const useHeaderRestauranteController = () => {
   const [nomeRestaurante, setNomeRestaurante] = useState("Carregando...");
+  
+  // Controles de Menu
   const [menuAberto, setMenuAberto] = useState(false);
+  const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
+  
+  // Controles de Pedidos e Alertas
+  const [pedidosPendentes, setPedidosPendentes] = useState(0);
+  const [mostrarAlertaPedido, setMostrarAlertaPedido] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubscribePedidos = () => {};
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const docRef = doc(db, 'restaurantes', user.uid);
@@ -17,7 +27,33 @@ export const useHeaderRestauranteController = () => {
           
           if (docSnap.exists()) {
             const dados = docSnap.data();
-            setNomeRestaurante(dados.nome_fantasia || "Meu Restaurante");
+            setNomeRestaurante(dados.nome_fantasia || dados.nomeFantasia || "Meu Restaurante");
+            
+            const idRestauranteReal = dados.id_restaurante;
+
+            // 👉 INICIA O OUVINTE NA HEADER PARA RODAR EM TODAS AS TELAS
+            if (idRestauranteReal) {
+              const q = query(
+                collection(db, 'pedidos'),
+                where('id_restaurante', '==', idRestauranteReal),
+                where('status', '==', 'pendente') 
+              );
+
+              let initialLoad = true; 
+
+              unsubscribePedidos = onSnapshot(q, (snapshot) => {
+                setPedidosPendentes(snapshot.docs.length);
+
+                if (!initialLoad) {
+                  snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                      dispararAlertaInterno();
+                    }
+                  });
+                }
+                initialLoad = false;
+              });
+            }
           } else {
             setNomeRestaurante("Restaurante");
           }
@@ -27,11 +63,48 @@ export const useHeaderRestauranteController = () => {
         }
       } else {
         setNomeRestaurante("Visitante");
+        unsubscribePedidos(); // Para de ouvir se deslogar
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribePedidos();
+    };
   }, []);
+
+  const dispararAlertaInterno = () => {
+    setMostrarAlertaPedido(true); 
+
+    try {
+      if (Platform.OS === 'web') {
+        const somDeNotificacao = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3'); 
+        somDeNotificacao.play().catch(erro => console.log('Som bloqueado', erro));
+      }
+    } catch (e) {}
+
+    setTimeout(() => {
+      setMostrarAlertaPedido(false);
+    }, 8000);
+  };
+
+  const fecharAlerta = () => setMostrarAlertaPedido(false);
+
+  const irParaPedidos = () => {
+    fecharAlerta();
+    setNotificacoesAbertas(false);
+    router.push('/restaurante/pedidos');
+  };
+
+  const toggleMenuPerfil = () => {
+    setNotificacoesAbertas(false);
+    setMenuAberto(!menuAberto);
+  };
+
+  const toggleNotificacoes = () => {
+    setMenuAberto(false);
+    setNotificacoesAbertas(!notificacoesAbertas);
+  };
 
   const handlePerfilClick = () => {
     setMenuAberto(false);
@@ -52,7 +125,13 @@ export const useHeaderRestauranteController = () => {
     nomeRestaurante, 
     handlePerfilClick,
     menuAberto,
-    setMenuAberto,
-    handleLogout
+    toggleMenuPerfil,
+    handleLogout,
+    notificacoesAbertas,
+    toggleNotificacoes,
+    pedidosPendentes,
+    mostrarAlertaPedido,
+    fecharAlerta,
+    irParaPedidos
   };
 };
