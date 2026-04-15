@@ -1,9 +1,17 @@
-import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { ProdutoModel } from '../models/ProdutoModel';
+import { doc, getDoc } from 'firebase/firestore';
+import { useState } from 'react';
 import { Platform } from 'react-native';
-import { auth, db } from '../config/firebase'; // 👉 Importamos o auth e db
-import { doc, getDoc } from 'firebase/firestore'; // 👉 Importamos o doc e getDoc
+import { auth, db } from '../config/firebase';
+import { ProdutoModel } from '../models/ProdutoModel';
+
+const TAGS = [
+  'Alta Proteína', 'Low Carb', 'Baixa Caloria', 'Fibras',
+  '100% Vegano', 'Vegetariano', 'Zero Açúcar', 'Sem Glúten',
+  'Sem Lactose', 'Keto / Cetogênica', 'Pré-Treino', 'Pós-Treino',
+  'Express / Rápido', 'Marmita Fit', 'Prensado a Frio', 'Orgânico',
+  'Refeição Livre (Fit)'
+];
 
 export const useCadastroPratoController = () => {
   const [nome, setNome] = useState('');
@@ -13,6 +21,10 @@ export const useCadastroPratoController = () => {
   const [calorias, setCalorias] = useState('');
   const [imagemUri, setImagemUri] = useState(null);
   const [salvando, setSalvando] = useState(false);
+
+  const selecionarTag = (tag) => {
+    setCategoria(prev => prev === tag ? '' : tag);
+  };
 
   const escolherImagem = async () => {
     if (Platform.OS !== 'web') {
@@ -24,16 +36,14 @@ export const useCadastroPratoController = () => {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], 
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.1, 
-      base64: true, 
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      const formatoBase64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setImagemUri(formatoBase64);
+      setImagemUri(result.assets[0].uri);
     }
   };
 
@@ -51,10 +61,9 @@ export const useCadastroPratoController = () => {
         return;
       }
 
-      // Vai no banco buscar o id_restaurante deste usuário
       const docRef = doc(db, 'restaurantes', user.uid);
       const docSnap = await getDoc(docRef);
-      
+
       if (!docSnap.exists() || !docSnap.data().id_restaurante) {
         alert("Erro: ID do restaurante não encontrado no sistema.");
         return;
@@ -62,24 +71,36 @@ export const useCadastroPratoController = () => {
 
       const idRestauranteAtual = docSnap.data().id_restaurante;
 
+      // Upload da foto via Cloudinary
+      let fotoUrl = '';
+      if (imagemUri) {
+        fotoUrl = await ProdutoModel.uploadParaCloudinary(imagemUri, Platform.OS);
+        if (!fotoUrl) {
+          alert("Erro ao fazer upload da foto. Tente novamente.");
+          setSalvando(false);
+          return;
+        }
+      }
+
       const novoPrato = {
-        id_restaurante: idRestauranteAtual, // 👉 Usa o ID real que veio do banco
+        id_restaurante: idRestauranteAtual,
         nome,
         descricao,
-        preco: parseFloat(preco.replace(',', '.')), 
+        preco: parseFloat(preco.replace(',', '.')),
         categoria,
         calorias: parseInt(calorias) || 0,
+        foto: fotoUrl,
       };
 
-      await ProdutoModel.cadastrar(novoPrato, null);
-      
+      await ProdutoModel.cadastrar(novoPrato);
+
       alert("Prato cadastrado com sucesso!");
-      
-      setNome(''); 
-      setDescricao(''); 
-      setPreco(''); 
-      setCategoria(''); 
-      setCalorias(''); 
+
+      setNome('');
+      setDescricao('');
+      setPreco('');
+      setCategoria('');
+      setCalorias('');
       setImagemUri(null);
     } catch (error) {
       console.error("Erro ao salvar prato:", error);
@@ -91,7 +112,8 @@ export const useCadastroPratoController = () => {
 
   return {
     nome, setNome, descricao, setDescricao, preco, setPreco,
-    categoria, setCategoria, calorias, setCalorias,
-    imagemUri, escolherImagem, salvarPrato, salvando
+    categoria, calorias, setCalorias,
+    imagemUri, escolherImagem, salvarPrato, salvando,
+    TAGS, selecionarTag
   };
 };

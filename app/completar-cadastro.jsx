@@ -86,9 +86,8 @@ export default function CompletarCadastroScreen() {
         cpf: cpf,
         data_nascimento: dataNascimento, // Ajustado para snake_case
         telefone: telefone, 
-        tipoConta: 'consumidor',
-        id_consumidor: id_consumidor_gerado, // 👉 2. SALVA O ID NO BANCO
-        data_criacao: new Date() // Ajustado para snake_case
+        tipoConta: 'consumidor', 
+        dataCriacao: new Date()
       });
 
       alert("Cadastro finalizado com sucesso! 🥗");

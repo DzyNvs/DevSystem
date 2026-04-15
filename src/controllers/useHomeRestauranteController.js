@@ -1,46 +1,75 @@
-import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
+import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore'; // 👉 onSnapshot voltou
+import { useEffect, useState } from 'react';
+import { auth, db } from '../config/firebase';
 import { LoginModel } from '../models/LoginModel';
 import { PedidoModel } from '../models/PedidoModel';
 
 export const useHomeRestauranteController = () => {
   const [resumo, setResumo] = useState({ totalPedidos: 0, totalVendas: 0 });
   const [carregandoResumo, setCarregandoResumo] = useState(true);
+  const [nomeRestaurante, setNomeRestaurante] = useState("");
+  
+  // 👉 Estado para a bolinha vermelha do botão
+  const [pedidosPendentes, setPedidosPendentes] = useState(0);
 
   useEffect(() => {
-    carregarResumoDiario();
+    let unsubscribe = () => {};
+
+    const carregarDadosIniciais = async () => {
+      try {
+        setCarregandoResumo(true);
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const docRef = doc(db, 'restaurantes', user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const dadosRestaurante = docSnap.data();
+          const idRestauranteReal = dadosRestaurante.id_restaurante; 
+          
+          if (dadosRestaurante.nomeFantasia) {
+            setNomeRestaurante(dadosRestaurante.nomeFantasia);
+          }
+
+          if (!idRestauranteReal) return;
+
+          // Busca o resumo de vendas
+          const pedidos = await PedidoModel.buscarPedidosDoRestaurante(idRestauranteReal);
+          const qtdPedidos = pedidos.length;
+          const valorTotal = pedidos.reduce((acumulador, pedido) => acumulador + (pedido.total_final || 0), 0);
+
+          setResumo({ totalPedidos: qtdPedidos, totalVendas: valorTotal });
+
+          // 👉 Ouve os pedidos APENAS para atualizar o número da bolinha na tela Home (silencioso)
+          const q = query(
+            collection(db, 'pedidos'),
+            where('id_restaurante', '==', idRestauranteReal),
+            where('status', '==', 'pendente') 
+          );
+
+          unsubscribe = onSnapshot(q, (snapshot) => {
+            setPedidosPendentes(snapshot.docs.length);
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados na home:", error);
+      } finally {
+        setCarregandoResumo(false);
+      }
+    };
+
+    carregarDadosIniciais();
+    
+    return () => unsubscribe();
   }, []);
-
-  const carregarResumoDiario = async () => {
-    try {
-      setCarregandoResumo(true);
-      const idRestauranteAtual = 'rest_01'; 
-      const pedidos = await PedidoModel.buscarPedidosDoRestaurante(idRestauranteAtual);
-
-      const qtdPedidos = pedidos.length;
-      const valorTotal = pedidos.reduce((acumulador, pedido) => {
-        return acumulador + (pedido.total_final || 0);
-      }, 0);
-
-      setResumo({
-        totalPedidos: qtdPedidos,
-        totalVendas: valorTotal
-      });
-
-    } catch (error) {
-      console.error("Erro ao carregar resumo na home:", error);
-    } finally {
-      setCarregandoResumo(false);
-    }
-  };
 
   const handleLogoff = async () => {
     try {
       await LoginModel.sair();
       router.replace('/'); 
-    } catch (error) {
-      alert("Erro ao tentar sair da conta.");
-    }
+    } catch (error) {}
   };
 
   const irParaCadastroRestaurante = () => router.push('/restaurante/perfil'); 
@@ -55,6 +84,8 @@ export const useHomeRestauranteController = () => {
     irParaNovoPrato,
     irParaCardapio,
     resumo, 
-    carregandoResumo 
+    carregandoResumo,
+    nomeRestaurante,
+    pedidosPendentes // 👉 Exportando o número
   };
 };

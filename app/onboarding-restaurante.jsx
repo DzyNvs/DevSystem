@@ -22,7 +22,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // ⚠️ ATENÇÃO: Ajuste o caminho do seu Firebase aqui se necessário:
-import { auth, db } from '../src/config/firebase.js';
+import { auth, db } from '../src/config/firebase';
 
 export default function OnboardingRestauranteScreen() {
   const router = useRouter();

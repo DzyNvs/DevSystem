@@ -1,10 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-
-
-import { getReactNativePersistence, initializeAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABqUR1DTGlBAvExdWBg3Os4ixY1SGk3tI",
@@ -19,10 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Ativando a persistência no celular
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// A Web aceita o getAuth padrão sem reclamar
+const auth = getAuth(app);
 
 export { auth, db, storage };
-
