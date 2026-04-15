@@ -1,8 +1,8 @@
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { doc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, GeoPoint } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // <-- Adicionado TextInput
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Mapa from '../components/Mapa.web';
 import { auth, db } from '../src/config/firebase';
@@ -12,6 +12,10 @@ export default function EscolherEnderecoScreen() {
   const [localizacao, setLocalizacao] = useState(null);
   const [enderecoNome, setEnderecoNome] = useState('');
   
+  const [apelido, setApelido] = useState('');
+  const [cep, setCep] = useState('');
+  const [cidade, setCidade] = useState('São Paulo'); 
+
   const [numero, setNumero] = useState('');
   const [complemento, setComplemento] = useState('');
   
@@ -22,15 +26,21 @@ export default function EscolherEnderecoScreen() {
     pegarLocalizacaoAtual();
   }, []);
 
+  // 👉 Função para aplicar a máscara do CEP (00000-000)
+  const handleCepChange = (texto) => {
+    let formatado = texto.replace(/\D/g, ''); // Remove tudo que não é número
+    if (formatado.length > 5) {
+      formatado = formatado.replace(/^(\d{5})(\d)/, '$1-$2'); // Coloca o hífen
+    }
+    setCep(formatado.slice(0, 9)); // Trava no tamanho máximo
+  };
+
   const pegarLocalizacaoAtual = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        if (Platform.OS === 'web') {
-          alert("Permissão de GPS negada.");
-        } else {
-          Alert.alert("Atenção", "Precisamos da permissão de GPS para continuar.");
-        }
+        if (Platform.OS === 'web') alert("Permissão de GPS negada.");
+        else Alert.alert("Atenção", "Precisamos da permissão de GPS para continuar.");
         setCarregando(false);
         return;
       }
@@ -56,6 +66,14 @@ export default function EscolherEnderecoScreen() {
           const rua = data.address.road || data.address.pedestrian || "Rua não encontrada";
           const bairro = data.address.suburb || data.address.neighbourhood || "";
           setEnderecoNome(`${rua}${bairro ? ' - ' + bairro : ''}`);
+
+          setCidade(data.address.city || data.address.town || data.address.village || "São Paulo");
+          
+          // Aplica a máscara no CEP que vem da API
+          let cepApi = data.address.postcode || "";
+          let cepLimpo = cepApi.replace(/\D/g, '');
+          if (cepLimpo.length > 5) cepLimpo = cepLimpo.replace(/^(\d{5})(\d)/, '$1-$2');
+          setCep(cepLimpo.slice(0, 9));
         } else {
           setEnderecoNome("Rua não encontrada na Web");
         }
@@ -64,6 +82,14 @@ export default function EscolherEnderecoScreen() {
         if (resposta.length > 0) {
           let det = resposta[0];
           setEnderecoNome(`${det.street || 'Rua s/n'} - ${det.district || ''}`);
+
+          setCidade(det.subregion || det.city || "São Paulo");
+          
+          // Aplica a máscara no CEP que vem da API nativa
+          let cepApi = det.postalCode || "";
+          let cepLimpo = cepApi.replace(/\D/g, '');
+          if (cepLimpo.length > 5) cepLimpo = cepLimpo.replace(/^(\d{5})(\d)/, '$1-$2');
+          setCep(cepLimpo.slice(0, 9));
         }
       }
     } catch (error) {
@@ -85,20 +111,29 @@ export default function EscolherEnderecoScreen() {
 
     setSalvando(true);
     try {
-      const docRef = doc(db, 'consumidores', usuarioAtual.uid);
-      await updateDoc(docRef, {
-        endereco_entrega: {
-          nome_rua: enderecoNome,
-          numero: numero, // <-- Salvando o número separado
-          complemento: complemento, // <-- Salvando o complemento separado
-          coordenadas: { lat: localizacao.latitude, lng: localizacao.longitude },
-          data_atualizacao: new Date()
-        }
-      });
+      const partesEndereco = enderecoNome.split(' - ');
+      const ruaExtraida = partesEndereco[0] || enderecoNome;
+      const bairroExtraido = partesEndereco[1] || '';
+
+      const novoEndereco = {
+        apelido: apelido.trim() || "Casa",
+        bairro: bairroExtraido,
+        cep: cep,
+        cidade: cidade, 
+        geolocalizacao: new GeoPoint(localizacao.latitude, localizacao.longitude),
+        id_consumidor: doc(db, 'consumidores', usuarioAtual.uid), 
+        numero: numero,
+        padrão: true,
+        rua: ruaExtraida,
+        complemento: complemento 
+      };
+
+      await addDoc(collection(db, 'enderecos'), novoEndereco);
 
       if (Platform.OS === 'web') window.alert("Endereço salvo com sucesso!");
       router.back(); 
     } catch (error) {
+      console.log("Erro ao salvar no banco de dados:", error);
       alert("Erro ao salvar no banco de dados.");
     } finally {
       setSalvando(false);
@@ -116,16 +151,31 @@ export default function EscolherEnderecoScreen() {
         <>
           <Mapa localizacao={localizacao} />
 
-          {/* Caixinha de Endereço com Inputs */}
           <View style={styles.caixaInfo}>
             <Text style={styles.label}>Local de Entrega (GPS):</Text>
             <Text style={styles.enderecoText}>{enderecoNome}</Text>
 
-            {/* Inputs para o cliente preencher */}
+            <View style={styles.linhaInputs}>
+              <TextInput
+                style={[styles.input, { flex: 1.5 }]}
+                placeholder="Apelido (ex: Casa)"
+                value={apelido}
+                onChangeText={setApelido}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="CEP"
+                keyboardType="numeric"
+                maxLength={9} // 👉 Adicionado o limite de caracteres aqui
+                value={cep}
+                onChangeText={handleCepChange} // 👉 Trocado o setCep direto pela função
+              />
+            </View>
+
             <View style={styles.linhaInputs}>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="Número"
+                placeholder="Número *"
                 keyboardType="numeric"
                 value={numero}
                 onChangeText={setNumero}
@@ -168,7 +218,7 @@ const styles = StyleSheet.create({
   },
   label: { fontSize: 12, color: '#888', fontWeight: 'bold' },
   enderecoText: { fontSize: 16, color: '#333', marginTop: 3, marginBottom: 10 },
-  linhaInputs: { flexDirection: 'row', gap: 10 },
+  linhaInputs: { flexDirection: 'row', gap: 10, marginBottom: 10 }, 
   input: { 
     borderWidth: 1, borderColor: '#DDD', borderRadius: 8, 
     paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, backgroundColor: '#F9F9F9' 
