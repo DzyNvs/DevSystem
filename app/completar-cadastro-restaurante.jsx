@@ -52,19 +52,19 @@ export default function CompletarCadastroRestauranteScreen() {
     setCarregando(true);
 
     try {
-      // 👉 GERA O ID DO RESTAURANTE (Mesma lógica do cadastro normal)
+      // 👉 1. GERA O ID DO RESTAURANTE (Sem duplicação!)
       const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
       const id_restaurante_gerado = `rest_${numeroAleatorio}`;
 
       await setDoc(doc(db, 'restaurantes', uid), {
-        nome_fantasia: nomeFantasia, 
-        razao_social: razaoSocial,   
-        email_rest: email,           
+        nome_fantasia: nomeFantasia,
+        razao_social: razaoSocial,
+        email_rest: email,
         cnpj: cnpj,
         telefone: telefone, 
         tipoConta: 'restaurante', 
-        id_restaurante: id_restaurante_gerado, // 👉 AQUI ESTÁ A CORREÇÃO!
-        dataCriacao: new Date()
+        id_restaurante: id_restaurante_gerado, // 👉 2. USA A VARIÁVEL AQUI PARA SALVAR NO BANCO!
+        data_criacao: new Date()
       });
 
       alert("Restaurante parceiro cadastrado com sucesso! 🥗");
