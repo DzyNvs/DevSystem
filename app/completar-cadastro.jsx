@@ -76,18 +76,26 @@ export default function CompletarCadastroScreen() {
     setCarregando(true);
 
     try {
+      // 👉 1. GERA O ID DO CONSUMIDOR AQUI
+      const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+      const id_consumidor_gerado = `cons_${numeroAleatorio}`;
+
       await setDoc(doc(db, 'consumidores', uid), {
         nome: nome,
         email: email,
         cpf: cpf,
-        dataNascimento: dataNascimento,
+        data_nascimento: dataNascimento, // Ajustado para snake_case
         telefone: telefone, 
-        tipoConta: 'consumidor', 
-        dataCriacao: new Date()
+        tipoConta: 'consumidor',
+        id_consumidor: id_consumidor_gerado, // 👉 2. SALVA O ID NO BANCO
+        data_criacao: new Date() // Ajustado para snake_case
       });
 
       alert("Cadastro finalizado com sucesso! 🥗");
-      router.replace('/(tabs)'); 
+      
+      // 👉 3. ROTA CORRIGIDA PARA IR PRA TELA PRINCIPAL
+      router.replace('/home-consumidor-screen'); 
+      
     } catch (error) {
       console.error("Erro ao salvar dados finais:", error);
       alert("Erro ao finalizar o cadastro. Tente novamente.");
@@ -215,7 +223,7 @@ const styles = StyleSheet.create({
     height: 75,
     backgroundColor: '#F2E3BB',
     paddingHorizontal: 40,
-    justifyContent: 'center',
+    justifyContent: 'center', // 👉 CORRIGIDO DE justify-content PARA justifyContent
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

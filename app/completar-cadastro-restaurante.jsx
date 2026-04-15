@@ -52,14 +52,19 @@ export default function CompletarCadastroRestauranteScreen() {
     setCarregando(true);
 
     try {
+      // 👉 GERA O ID DO RESTAURANTE
+      const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+      const id_restaurante_gerado = `rest_${numeroAleatorio}`;
+
       await setDoc(doc(db, 'restaurantes', uid), {
-        nomeFantasia: nomeFantasia,
-        razaoSocial: razaoSocial,
-        email: email,
+        nome_fantasia: nomeFantasia,
+        razao_social: razaoSocial,
+        email_rest: email,
         cnpj: cnpj,
         telefone: telefone, 
         tipoConta: 'restaurante', 
-        dataCriacao: new Date()
+        id_restaurante: id_restaurante_gerado, // 👉 ID INSERIDO AQUI!
+        data_criacao: new Date()
       });
 
       alert("Restaurante parceiro cadastrado com sucesso! 🥗");
