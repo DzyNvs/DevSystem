@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons'; // <-- ADICIONADO: Importação do ícone
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { db } from '../src/config/firebase';
 
-// Importando as imagens para o cabeçalho e a imagem da direita
 const logo = require('../assets/images/logo.png');
 const vector = require('../assets/images/vector.png');
 const store = require('../assets/images/store.png');
@@ -32,7 +31,6 @@ export default function CompletarCadastroScreen() {
   const [telefone, setTelefone] = useState(''); 
   const [carregando, setCarregando] = useState(false);
 
-  // Controles para o menu (mantido por compatibilidade com o cabeçalho)
   const [highlightRestaurante, setHighlightRestaurante] = useState(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 768;
@@ -76,7 +74,6 @@ export default function CompletarCadastroScreen() {
     setCarregando(true);
 
     try {
-      // 👉 1. GERA O ID DO CONSUMIDOR AQUI
       const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
       const id_consumidor_gerado = `cons_${numeroAleatorio}`;
 
@@ -84,15 +81,14 @@ export default function CompletarCadastroScreen() {
         nome: nome,
         email: email,
         cpf: cpf,
-        data_nascimento: dataNascimento, // Ajustado para snake_case
+        data_nascimento: dataNascimento, 
         telefone: telefone, 
         tipoConta: 'consumidor', 
-        dataCriacao: new Date()
+        id_consumidor: id_consumidor_gerado, 
+        data_criacao: new Date()
       });
 
       alert("Cadastro finalizado com sucesso! 🥗");
-      
-      // 👉 3. ROTA CORRIGIDA PARA IR PRA TELA PRINCIPAL
       router.replace('/home-consumidor-screen'); 
       
     } catch (error) {
@@ -107,7 +103,6 @@ export default function CompletarCadastroScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
 
-      {/* Cabeçalho */}
       <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
         <View style={styles.headerContent}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -140,7 +135,6 @@ export default function CompletarCadastroScreen() {
       </View>
 
       <View style={styles.mainContainer}>
-        {/* Coluna esquerda: formulário */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[
@@ -151,10 +145,11 @@ export default function CompletarCadastroScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContainer}>
-            {/* --- NOVO: BOTÃO DE VOLTAR --- */}
-            <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
+            
+            {/* 👉 AQUI ESTÁ A CORREÇÃO: Forçando a volta para o Login '/' */}
+            <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.replace('cadastroscreen')}>
               <Ionicons name="arrow-back" size={24} color="#333" />
-              <Text style={styles.textoVoltar}>Voltar</Text>
+              <Text style={styles.textoVoltar}>Voltar ao Login</Text>
             </TouchableOpacity>
 
             <Text style={styles.titulo}>Falta pouco!</Text>
@@ -205,7 +200,6 @@ export default function CompletarCadastroScreen() {
           </View>
         </ScrollView>
 
-        {/* Coluna direita: imagem (apenas em web) */}
         {!isSmallScreen && (
           <View style={styles.rightColumn}>
             <Image source={capa3} style={styles.capaImage} resizeMode="cover" />
@@ -222,7 +216,7 @@ const styles = StyleSheet.create({
     height: 75,
     backgroundColor: '#F2E3BB',
     paddingHorizontal: 40,
-    justifyContent: 'center', // 👉 CORRIGIDO DE justify-content PARA justifyContent
+    justifyContent: 'center', 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -263,10 +257,8 @@ const styles = StyleSheet.create({
     maxWidth: 587,
     alignSelf: 'center',
   },
-  /* --- ESTILOS DO BOTÃO VOLTAR --- */
-  botaoVoltar: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 10 }, // reduzido de 20 para 10
+  botaoVoltar: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 10 }, 
   textoVoltar: { fontSize: 16, color: '#333', marginLeft: 8, fontWeight: '600' },
-  /* ------------------------------- */
   titulo: {
     fontSize: 44,
     fontWeight: '800',
@@ -283,7 +275,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20, 
   },
-  label: { fontSize: 15, fontWeight: '600', marginBottom: 4, color: '#2A2D34' }, // marginBottom reduzido
+  label: { fontSize: 15, fontWeight: '600', marginBottom: 4, color: '#2A2D34' }, 
   input: {
     backgroundColor: '#FAF8F3',
     borderRadius: 5,

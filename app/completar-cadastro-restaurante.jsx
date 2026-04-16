@@ -52,7 +52,6 @@ export default function CompletarCadastroRestauranteScreen() {
     setCarregando(true);
 
     try {
-      // 👉 1. GERA O ID DO RESTAURANTE (Sem duplicação!)
       const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
       const id_restaurante_gerado = `rest_${numeroAleatorio}`;
 
@@ -63,12 +62,14 @@ export default function CompletarCadastroRestauranteScreen() {
         cnpj: cnpj,
         telefone: telefone, 
         tipoConta: 'restaurante', 
-        id_restaurante: id_restaurante_gerado, // 👉 2. USA A VARIÁVEL AQUI PARA SALVAR NO BANCO!
+        id_restaurante: id_restaurante_gerado, 
         data_criacao: new Date()
       });
 
       alert("Restaurante parceiro cadastrado com sucesso! 🥗");
-      router.replace('/home-restaurante-screen'); 
+      
+      // 👉 ALTERAÇÃO 1: Redireciona para o onboarding após concluir o cadastro
+      router.replace('/onboarding-restaurante'); 
       
     } catch (error) {
       console.error("Erro ao salvar dados finais:", error);
@@ -81,9 +82,11 @@ export default function CompletarCadastroRestauranteScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
+        
+        {/* 👉 ALTERAÇÃO 2: Botão Voltar agora manda direto para o Login ('/') */}
+        <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.replace('cadastroscreen')}>
           <Ionicons name="arrow-back" size={24} color="#333" />
-          <Text style={styles.textoVoltar}>Voltar</Text>
+          <Text style={styles.textoVoltar}>Voltar ao Login</Text>
         </TouchableOpacity>
 
         <Text style={styles.titulo}>Seja nosso Parceiro!</Text>
