@@ -263,7 +263,72 @@ app.post('/verificar-codigo-login', async (req, res) => {
 });
 
 // =========================================================
-// INICIALIZAÇÃO DO SERVIDOR (Movido para o final)
+// ROTA 6: ENVIAR NOTA FISCAL (SIMULAÇÃO)
+// =========================================================
+app.post('/enviar-nota-fiscal', async (req, res) => {
+  const { email, itens, subtotal, taxaEntrega, totalFinal, idPedido } = req.body;
+
+  if (!email || !itens) {
+    return res.status(400).json({ erro: "Dados insuficientes para gerar a nota." });
+  }
+
+  try {
+    // Gerando as linhas da tabela de itens
+    const itensHtml = itens.map(item => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.nome} (x${item.qtd})</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">R$ ${(item.preco * item.qtd).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const mailOptions = {
+      from: '"FitWay 🥗 - Nota Fiscal" <devsystemimpacta@gmail.com>',
+      to: email,
+      subject: `Nota Fiscal Simplificada - Pedido #${idPedido.substring(0, 8)}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
+          <h2 style="color: #8CC63F; text-align: center;">FitWay - Recibo de Compra</h2>
+          <p>Olá! Obrigado por comprar conosco. Aqui estão os detalhes do seu pedido:</p>
+          <p><strong>ID do Pedido:</strong> ${idPedido}</p>
+          <hr />
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="text-align: left; padding: 8px;">Item</th>
+                <th style="text-align: right; padding: 8px;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itensHtml}
+            </tbody>
+          </table>
+          <div style="margin-top: 20px; text-align: right;">
+            <p><strong>Subtotal:</strong> R$ ${subtotal.toFixed(2)}</p>
+            <p><strong>Taxa de Entrega:</strong> R$ ${taxaEntrega.toFixed(2)}</p>
+            <h3 style="color: #8CC63F;">Total: R$ ${totalFinal.toFixed(2)}</h3>
+          </div>
+          <hr />
+          <p style="font-size: 12px; color: #777; text-align: center;">
+            Esta é uma simulação de nota fiscal para fins acadêmicos.<br>
+            FitWay Alimentação Saudável LTDA.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[SUCESSO] Nota Fiscal enviada para ${email}`);
+    return res.status(200).json({ sucesso: true });
+
+  } catch (error) {
+    console.error("Erro ao enviar nota fiscal:", error);
+    return res.status(500).json({ erro: "Erro ao enviar e-mail da nota." });
+  }
+});
+
+
+// =========================================================
+// INICIALIZAÇÃO DO SERVIDOR
 // =========================================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

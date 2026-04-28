@@ -3,18 +3,19 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { auth } from '../config/firebase';
 import { PedidoModel } from '../models/PedidoModel';
-import { RestauranteModel } from '../models/RestauranteModel'; // 👉 Importando o model do restaurante
+import { RestauranteModel } from '../models/RestauranteModel'; 
 import { useCarrinhoStore } from './useCarrinhoStore';
+
+import { API_URL } from '../config/api.js';
 
 export const usePagamentoController = () => {
   const itens = useCarrinhoStore((state) => state.itens) || [];
-  const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId); // 👉 Cuidado: no seu store está salvo como restauranteId
+  const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId); 
   const limparCarrinho = useCarrinhoStore((state) => state.limparCarrinho);
   
   const [carregando, setCarregando] = useState(false);
   const [carregandoOpcoes, setCarregandoOpcoes] = useState(true);
   
-  // 👉 Novos estados para gerenciar a escolha do cliente
   const [tipoPagamento, setTipoPagamento] = useState('online'); // 'online' ou 'entrega'
   const [formaPagamentoEntrega, setFormaPagamentoEntrega] = useState(null);
   const [opcoesRestaurante, setOpcoesRestaurante] = useState({});
@@ -25,7 +26,6 @@ export const usePagamentoController = () => {
   const taxaEntrega = 5.00; 
   const totalFinal = subtotal + taxaEntrega;
 
-  // 👉 Busca as opções de pagamento liberadas pelo restaurante no Firebase
   useEffect(() => {
     if (idRestauranteAtual) {
       RestauranteModel.buscarPorId(idRestauranteAtual)
@@ -84,7 +84,6 @@ export const usePagamentoController = () => {
   const finalizarPedido = async () => {
     if (itens.length === 0) return alert("Seu carrinho está vazio!");
     
-    // Trava se o cara selecionou pagamento na entrega mas não escolheu a opção
     if (tipoPagamento === 'entrega' && !formaPagamentoEntrega) {
       return alert("Por favor, selecione como você vai pagar na entrega!");
     }
@@ -96,12 +95,10 @@ export const usePagamentoController = () => {
 
       let linkPagamento = '';
       
-      // 👉 Só gera Mercado Pago se o cara escolheu pagar online
       if (tipoPagamento === 'online') {
         linkPagamento = await gerarPagamentoMercadoPago();
       }
 
-      // 2. Salva o Pedido no Firebase
       const dadosPedido = {
         id_restaurante: idRestauranteAtual,
         id_consumidor: user.uid, 
@@ -114,7 +111,30 @@ export const usePagamentoController = () => {
         forma_pagamento: tipoPagamento === 'online' ? 'mercado_pago' : formaPagamentoEntrega
       };
 
-      await PedidoModel.criarPedido(dadosPedido);
+      // 1. Salva o Pedido no Firebase e pega o ID gerado
+      const idPedidoGerado = await PedidoModel.criarPedido(dadosPedido);
+
+      // 👉 2. NOVO: Dispara a requisição para o servidor enviar a Nota Fiscal por e-mail
+      try {
+        await fetch(`${API_URL}/enviar-nota-fiscal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email, 
+            itens: itens,
+            subtotal: subtotal,
+            taxaEntrega: taxaEntrega,
+            totalFinal: totalFinal,
+            idPedido: idPedidoGerado
+          })
+        });
+        console.log("Comando de envio de nota fiscal disparado com sucesso.");
+      } catch (errEmail) {
+        console.error("Erro ao solicitar envio de e-mail da nota:", errEmail);
+        // O erro no envio de email não impede a conclusão do pedido
+      }
+
+      // 3. Limpa o carrinho após sucesso
       limparCarrinho();
 
       // 4. Abre o navegador SÓ SE for Mercado Pago
@@ -122,8 +142,8 @@ export const usePagamentoController = () => {
         await WebBrowser.openBrowserAsync(linkPagamento);
       }
 
-      alert("Pedido gerado com sucesso!");
-      router.replace('/home-consumidor-screen'); // Ajuste o nome da sua rota inicial aqui
+      alert("Pedido gerado com sucesso! Verifique seu e-mail para ver a nota fiscal.");
+      router.replace('/home-consumidor-screen'); 
 
     } catch (error) {
       alert("Ocorreu um erro ao processar seu pedido.");
