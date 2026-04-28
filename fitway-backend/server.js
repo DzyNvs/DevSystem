@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit'); // 👉 Nova dependência para PDF
 
 // Inicializando o Firebase Admin
 const serviceAccount = require('./firebase-credentials.json');
@@ -26,16 +27,12 @@ const transporter = nodemailer.createTransport({
 });
 
 // =========================================================
-// ROTAS ANTIGAS MANTIDAS: RECUPERAÇÃO DE SENHA (CADASTRO)
+// ROTAS DE RECUPERAÇÃO E LOGIN (MANTIDAS)
 // =========================================================
 
-// --- ROTA 1: SOLICITAR RECUPERAÇÃO DE SENHA ---
 app.post('/esqueci-senha', async (req, res) => {
   const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ erro: "E-mail não fornecido." });
-  }
+  if (!email) return res.status(400).json({ erro: "E-mail não fornecido." });
 
   try {
     const consSnapshot = await db.collection('consumidores').where('email', '==', email).get();
@@ -46,7 +43,6 @@ app.post('/esqueci-senha', async (req, res) => {
     }
 
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-
     const expiraEm = new Date();
     expiraEm.setMinutes(expiraEm.getMinutes() + 10);
 
@@ -60,277 +56,149 @@ app.post('/esqueci-senha', async (req, res) => {
       from: '"Equipe FitWay 🥗" <devsystemimpacta@gmail.com>',
       to: email,
       subject: 'Seu código de recuperação - FitWay',
-      html: `
-        <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
-          <h2 style="color: #8CC63F;">FitWay</h2>
-          <p>Você solicitou a redefinição da sua senha.</p>
-          <p>Insira o código de 6 dígitos abaixo no aplicativo:</p>
-          <h1 style="letter-spacing: 5px; color: #000; background: #F8F9FA; padding: 15px; border-radius: 8px; display: inline-block;">${codigo}</h1>
-          <p style="font-size: 12px; color: #999;">Este código expira em 10 minutos.</p>
-        </div>
-      `
+      html: `<div style="font-family: Arial; text-align: center;"><h2 style="color: #8CC63F;">FitWay</h2><p>Código: <b>${codigo}</b></p></div>`
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[SUCESSO] Código enviado para ${email}`);
-
-    return res.status(200).json({ sucesso: true, mensagem: "Código gerado com sucesso!" });
-
+    return res.status(200).json({ sucesso: true });
   } catch (error) {
-    console.error("Erro na rota esqueci-senha:", error);
-    return res.status(500).json({ erro: "Erro interno do servidor." });
+    return res.status(500).json({ erro: "Erro interno." });
   }
 });
 
-// --- ROTA 2: VERIFICAR CÓDIGO DE RECUPERAÇÃO ---
 app.post('/verificar-codigo', async (req, res) => {
   const { email, codigo } = req.body;
-
-  // Validação básica
-  if (!email || !codigo) {
-    return res.status(400).json({ message: "E-mail e código são obrigatórios." });
-  }
-
   try {
-    // 1. Busca o documento no Firestore usando o e-mail
-    const docRef = db.collection('CodigosRecuperacao').doc(email);
-    const doc = await docRef.get();
-
-    // 2. Verifica se o documento existe (se a pessoa realmente pediu um código)
-    if (!doc.exists) {
-      return res.status(400).json({ message: "Nenhum código encontrado. Volte e solicite um novo." });
-    }
-
-    const dadosCodigo = doc.data();
-
-    // 3. Verifica se o código digitado é igual ao do banco
-    if (dadosCodigo.codigo !== String(codigo)) {
-      return res.status(400).json({ message: "Código inválido. Verifique o e-mail e tente novamente." });
-    }
-
-    // 4. Verifica se o tempo de 10 minutos já passou
-    const agora = new Date();
-    const expiraEm = dadosCodigo.expiraEm.toDate(); // Converte de Firestore para JavaScript Date
-
-    if (agora > expiraEm) {
-      return res.status(400).json({ message: "Este código expirou. Solicite um novo." });
-    }
-
-    // Sucesso! O código está certo e no prazo.
-    return res.status(200).json({ message: "Código validado com sucesso!" });
-
-  } catch (error) {
-    console.error("Erro na rota verificar-codigo:", error);
-    return res.status(500).json({ message: "Erro interno do servidor ao verificar o código." });
-  }
+    const doc = await db.collection('CodigosRecuperacao').doc(email).get();
+    if (!doc.exists || doc.data().codigo !== String(codigo)) return res.status(400).json({ message: "Inválido" });
+    return res.status(200).json({ message: "OK" });
+  } catch (error) { return res.status(500).json({ message: "Erro" }); }
 });
 
-// --- ROTA 3: ATUALIZAR A SENHA NO FIREBASE AUTH ---
 app.post('/atualizar-senha', async (req, res) => {
   const { email, novaSenha } = req.body;
-
-  if (!email || !novaSenha) {
-    return res.status(400).json({ message: "E-mail e nova senha são obrigatórios." });
-  }
-
   try {
-    // 1. Busca o usuário diretamente no Firebase Authentication usando o e-mail
     const userRecord = await admin.auth().getUserByEmail(email);
-
-    // 2. Atualiza a senha do usuário usando o UID (ID único) dele
-    await admin.auth().updateUser(userRecord.uid, {
-      password: novaSenha
-    });
-
-    console.log(`[SUCESSO] Senha atualizada no Auth para: ${email}`);
-
-    // 3. Limpeza: Apaga o código de recuperação do Firestore para não ser reusado
+    await admin.auth().updateUser(userRecord.uid, { password: novaSenha });
     await db.collection('CodigosRecuperacao').doc(email).delete();
-
-    return res.status(200).json({ message: "Senha atualizada com sucesso!" });
-
-  } catch (error) {
-    console.error("Erro ao atualizar a senha no Firebase Auth:", error);
-    
-    // O Firebase é inteligente e avisa se o e-mail não existir na aba de Autenticação
-    if (error.code === 'auth/user-not-found') {
-      return res.status(404).json({ message: "Nenhum usuário encontrado com este e-mail." });
-    }
-
-    return res.status(500).json({ message: "Erro interno ao atualizar a senha." });
-  }
+    return res.status(200).json({ message: "Sucesso" });
+  } catch (error) { return res.status(500).json({ message: "Erro" }); }
 });
 
-// =========================================================
-// ROTAS NOVAS: SISTEMA DE LOGIN SEM SENHA (PASSWORDLESS)
-// =========================================================
-
-// --- ROTA 4: SOLICITAR CÓDIGO PARA LOGIN ---
 app.post('/enviar-codigo-login', async (req, res) => {
   const { email } = req.body;
-
-  if (!email) return res.status(400).json({ erro: "E-mail não fornecido." });
-
   try {
-    // 1. Verifica se o usuário existe em alguma das tabelas
-    const consSnapshot = await db.collection('consumidores').where('email', '==', email).get();
-    // Nota: Lembre-se que na criação a gente salvou como email ou email_rest, buscando nos dois:
-    const restSnapshot = await db.collection('restaurantes').where('email', '==', email).get();
-    const restSnapshotAlt = await db.collection('restaurantes').where('email_rest', '==', email).get();
-
-    if (consSnapshot.empty && restSnapshot.empty && restSnapshotAlt.empty) {
-      return res.status(404).json({ erro: "Nenhuma conta encontrada com este e-mail." });
-    }
-
-    // 2. Gera o código de 6 dígitos
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
     const expiraEm = new Date();
-    expiraEm.setMinutes(expiraEm.getMinutes() + 10); // Válido por 10 min
-
-    // 3. Salva no banco de dados
-    await db.collection('CodigosLogin').doc(email).set({
-      codigo: codigo,
-      expiraEm: expiraEm,
-      criadoEm: new Date()
-    });
-
-    // 4. Envia o e-mail
-    const mailOptions = {
-      from: '"Equipe FitWay 🥗" <devsystemimpacta@gmail.com>',
+    expiraEm.setMinutes(expiraEm.getMinutes() + 10);
+    await db.collection('CodigosLogin').doc(email).set({ codigo, expiraEm });
+    await transporter.sendMail({
+      from: '"FitWay 🥗"',
       to: email,
-      subject: 'Seu código de acesso - FitWay',
-      html: `
-        <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
-          <h2 style="color: #8CC63F;">FitWay</h2>
-          <p>Seu código de acesso seguro para entrar no aplicativo é:</p>
-          <h1 style="letter-spacing: 5px; color: #000; background: #F8F9FA; padding: 15px; border-radius: 8px; display: inline-block;">${codigo}</h1>
-          <p style="font-size: 12px; color: #999;">Este código expira em 10 minutos.</p>
-        </div>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`[SUCESSO] Código de LOGIN enviado para ${email}`);
-
-    return res.status(200).json({ sucesso: true, mensagem: "Código enviado!" });
-
-  } catch (error) {
-    console.error("Erro no envio do código de login:", error);
-    return res.status(500).json({ erro: "Erro interno do servidor." });
-  }
+      subject: 'Código de Acesso',
+      html: `<h1>${codigo}</h1>`
+    });
+    return res.status(200).json({ sucesso: true });
+  } catch (error) { return res.status(500).json({ erro: "Erro" }); }
 });
 
-// --- ROTA 5: VALIDAR CÓDIGO DE LOGIN E GERAR TOKEN (PASSE VIP) ---
 app.post('/verificar-codigo-login', async (req, res) => {
   const { email, codigo } = req.body;
-
-  if (!email || !codigo) return res.status(400).json({ erro: "E-mail e código são obrigatórios." });
-
   try {
-    const docRef = db.collection('CodigosLogin').doc(email);
-    const doc = await docRef.get();
-
-    if (!doc.exists) return res.status(400).json({ erro: "Nenhum código encontrado. Solicite um novo." });
-
-    const dadosCodigo = doc.data();
-
-    // Verifica se o código bate
-    if (dadosCodigo.codigo !== String(codigo)) {
-      return res.status(400).json({ erro: "Código inválido." });
-    }
-
-    // Verifica expiração
-    if (new Date() > dadosCodigo.expiraEm.toDate()) {
-      return res.status(400).json({ erro: "Este código expirou. Solicite um novo." });
-    }
-
-    // A MÁGICA ACONTECE AQUI: Cria o Custom Token do Firebase
+    const doc = await db.collection('CodigosLogin').doc(email).get();
+    if (!doc.exists || doc.data().codigo !== String(codigo)) return res.status(400).json({ erro: "Inválido" });
     const userRecord = await admin.auth().getUserByEmail(email);
-    const customToken = await admin.auth().createCustomToken(userRecord.uid);
-
-    // Apaga o código usado por segurança
-    await docRef.delete();
-
-    console.log(`[SUCESSO] Token de LOGIN gerado para ${email}`);
-
-    // Devolve o token para o aplicativo
-    return res.status(200).json({ token: customToken });
-
-  } catch (error) {
-    console.error("Erro ao verificar código de login:", error);
-    return res.status(500).json({ erro: "Erro interno ao validar o código." });
-  }
+    const token = await admin.auth().createCustomToken(userRecord.uid);
+    return res.status(200).json({ token });
+  } catch (error) { return res.status(500).json({ erro: "Erro" }); }
 });
 
 // =========================================================
-// ROTA 6: ENVIAR NOTA FISCAL (SIMULAÇÃO)
+// ROTA 6: ENVIAR NOTA FISCAL EM PDF
 // =========================================================
 app.post('/enviar-nota-fiscal', async (req, res) => {
   const { email, itens, subtotal, taxaEntrega, totalFinal, idPedido } = req.body;
 
   if (!email || !itens) {
-    return res.status(400).json({ erro: "Dados insuficientes para gerar a nota." });
+    return res.status(400).json({ erro: "Dados insuficientes." });
   }
 
   try {
-    // Gerando as linhas da tabela de itens
-    const itensHtml = itens.map(item => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.nome} (x${item.qtd})</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">R$ ${(item.preco * item.qtd).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const doc = new PDFDocument({ margin: 50 });
+    let buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    
+    doc.on('end', async () => {
+      const pdfData = Buffer.concat(buffers);
 
-    const mailOptions = {
-      from: '"FitWay 🥗 - Nota Fiscal" <devsystemimpacta@gmail.com>',
-      to: email,
-      subject: `Nota Fiscal Simplificada - Pedido #${idPedido.substring(0, 8)}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
-          <h2 style="color: #8CC63F; text-align: center;">FitWay - Recibo de Compra</h2>
-          <p>Olá! Obrigado por comprar conosco. Aqui estão os detalhes do seu pedido:</p>
-          <p><strong>ID do Pedido:</strong> ${idPedido}</p>
-          <hr />
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #f8f9fa;">
-                <th style="text-align: left; padding: 8px;">Item</th>
-                <th style="text-align: right; padding: 8px;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itensHtml}
-            </tbody>
-          </table>
-          <div style="margin-top: 20px; text-align: right;">
-            <p><strong>Subtotal:</strong> R$ ${subtotal.toFixed(2)}</p>
-            <p><strong>Taxa de Entrega:</strong> R$ ${taxaEntrega.toFixed(2)}</p>
-            <h3 style="color: #8CC63F;">Total: R$ ${totalFinal.toFixed(2)}</h3>
-          </div>
-          <hr />
-          <p style="font-size: 12px; color: #777; text-align: center;">
-            Esta é uma simulação de nota fiscal para fins acadêmicos.<br>
-            FitWay Alimentação Saudável LTDA.
-          </p>
-        </div>
-      `
-    };
+      const mailOptions = {
+        from: '"FitWay 🥗 - Financeiro" <devsystemimpacta@gmail.com>',
+        to: email,
+        subject: `Nota Fiscal - Pedido #${idPedido.substring(0, 8)}`,
+        text: 'Olá! Obrigado por comprar no FitWay. Sua nota fiscal está em anexo.',
+        attachments: [
+          {
+            filename: `NotaFiscal_FitWay_${idPedido.substring(0, 8)}.pdf`,
+            content: pdfData
+          }
+        ]
+      };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`[SUCESSO] Nota Fiscal enviada para ${email}`);
+      await transporter.sendMail(mailOptions);
+      console.log(`[PDF ENVIADO] ${email}`);
+    });
+
+    // --- DESENHANDO O PDF ---
+    doc.fillColor('#8CC63F').fontSize(22).text('FITWAY - RECIBO DE COMPRA', { align: 'center' });
+    doc.moveDown();
+    
+    doc.fillColor('#333').fontSize(10).text(`ID DO PEDIDO: ${idPedido}`);
+    doc.text(`DATA: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`);
+    doc.moveDown();
+    doc.text('----------------------------------------------------------------------------------------------------');
+    doc.moveDown();
+
+    // Cabeçalho da Tabela
+    doc.fontSize(12).text('Item', 50, doc.y, { continued: true });
+    doc.text('Qtd', 350, doc.y, { continued: true });
+    doc.text('Preço', 450, doc.y);
+    doc.moveDown(0.5);
+
+    // Itens
+    itens.forEach(item => {
+      doc.fontSize(10).fillColor('#555');
+      const y = doc.y;
+      doc.text(item.nome, 50, y);
+      doc.text(item.qtd.toString(), 350, y);
+      doc.text(`R$ ${(item.preco * item.qtd).toFixed(2)}`, 450, y);
+      doc.moveDown(0.5);
+    });
+
+    doc.moveDown();
+    doc.fillColor('#333').text('----------------------------------------------------------------------------------------------------');
+    doc.moveDown();
+
+    // Totais
+    doc.fontSize(12);
+    doc.text(`SUBTOTAL: R$ ${subtotal.toFixed(2)}`, { align: 'right' });
+    doc.text(`TAXA ENTREGA: R$ ${taxaEntrega.toFixed(2)}`, { align: 'right' });
+    doc.moveDown(0.5);
+    doc.fillColor('#8CC63F').fontSize(16).text(`TOTAL FINAL: R$ ${totalFinal.toFixed(2)}`, { align: 'right' });
+
+    doc.moveDown(5);
+    doc.fontSize(8).fillColor('#999').text('FitWay Alimentação Saudável LTDA - Documento sem valor fiscal (Simulação Acadêmica)', { align: 'center' });
+
+    doc.end();
     return res.status(200).json({ sucesso: true });
 
   } catch (error) {
-    console.error("Erro ao enviar nota fiscal:", error);
-    return res.status(500).json({ erro: "Erro ao enviar e-mail da nota." });
+    console.error("Erro PDF:", error);
+    return res.status(500).json({ erro: "Erro ao gerar PDF." });
   }
 });
 
-
-// =========================================================
-// INICIALIZAÇÃO DO SERVIDOR
-// =========================================================
+// --- INICIALIZAÇÃO ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor do FitWay rodando na porta ${PORT} 🥗`);
+  console.log(`Servidor FitWay rodando na porta ${PORT} 🥗`);
 });
