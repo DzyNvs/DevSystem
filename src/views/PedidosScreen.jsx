@@ -1,9 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { usePedidosController } from '../controllers/usePedidosController';
 import { HeaderRestaurante } from './HeaderRestaurante';
+
+// Linhas com 5 cards
+const { width } = Dimensions.get('window');
+const gap = 16;
+const paddingHorizontal = 20;
+const cardWidth = (width - (paddingHorizontal * 2) - (gap * 4)) / 5;
 
 export function PedidosScreen() {
   const ctrl = usePedidosController();
@@ -27,8 +33,8 @@ export function PedidosScreen() {
     switch (status) {
       case 'pendente': return { texto: 'Aguardando', cor: '#E65100', fundo: '#FFF3E0' };
       case 'confirmado': return { texto: 'Confirmado', cor: '#1565C0', fundo: '#E3F2FD' };
-      case 'preparando': return { texto: 'Em Preparo', cor: '#6A1B9A', fundo: '#F3E5F5' };
-      case 'saiu_entrega': return { texto: 'Em Envio', cor: '#0277BD', fundo: '#E1F5FE' };
+      case 'preparando': return { texto: 'Em Preparo', cor: '#E65100', fundo: '#FFF3E0' };
+      case 'saiu_entrega': return { texto: 'Em Envio', cor: '#E65100', fundo: '#FFF3E0' };
       case 'entregue': return { texto: 'Finalizado', cor: '#2E7D32', fundo: '#E8F5E9' };
       case 'recusado': return { texto: 'Recusado', cor: '#C62828', fundo: '#FFEBEE' };
       default: return { texto: status, cor: '#777', fundo: '#EEE' };
@@ -90,7 +96,7 @@ export function PedidosScreen() {
               <TouchableOpacity style={[styles.btnAcao, styles.btnRecusar]} onPress={() => ctrl.alterarStatus(item.id, 'recusado')}>
                 <Text style={styles.txtBtnBranco}>Recusar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.btnAcao, styles.btnAceitar]} onPress={() => ctrl.alterarStatus(item.id, 'confirmado')}>
+              <TouchableOpacity style={[styles.btnAcao, styles.btnPadrao]} onPress={() => ctrl.alterarStatus(item.id, 'confirmado')}>
                 <Text style={styles.txtBtnBranco}>Aceitar Pedido</Text>
               </TouchableOpacity>
             </>
@@ -109,7 +115,7 @@ export function PedidosScreen() {
           )}
 
           {item.status === 'saiu_entrega' && (
-            <TouchableOpacity style={[styles.btnAcao, styles.btnConcluir]} onPress={() => ctrl.alterarStatus(item.id, 'entregue')}>
+            <TouchableOpacity style={[styles.btnAcao, styles.btnPadrao]} onPress={() => ctrl.alterarStatus(item.id, 'entregue')}>
               <Text style={styles.txtBtnBranco}>Marcar como Entregue</Text>
             </TouchableOpacity>
           )}
@@ -149,12 +155,15 @@ export function PedidosScreen() {
         </View>
 
         {ctrl.carregando ? (
-          <ActivityIndicator size="large" color="#4CAF50" style={{ marginTop: 50 }} />
+          <ActivityIndicator size="large" color="#93BD57" style={{ marginTop: 50 }} />
         ) : (
           <FlatList
+            key={'grid-5'}
             data={pedidosFiltrados}
             keyExtractor={(item) => item.id}
             renderItem={renderPedido}
+            numColumns={5}
+            columnWrapperStyle={styles.columnWrapper}
             contentContainerStyle={styles.lista}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -168,49 +177,54 @@ export function PedidosScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F5F5F5' },
+  mainContainer: { flex: 1, backgroundColor: '#F9FAFB' },
   content: { flex: 1, paddingTop: 15 },
   
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 20 },
   botaoVoltar: { marginRight: 15, padding: 4 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   
-  // Estilos das Abas
-  abasContainer: { borderBottomWidth: 1, borderBottomColor: '#DDD', paddingBottom: 10, paddingHorizontal: 20, marginBottom: 15 },
-  abaBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#EEE', marginRight: 10 },
-  abaAtiva: { backgroundColor: '#2E7D32' },
+  abasContainer: { borderBottomWidth: 1, borderBottomColor: '#EAEAEA', paddingBottom: 10, paddingHorizontal: 20, marginBottom: 15 },
+  abaBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F0F0F0', marginRight: 10, borderWidth: 1, borderColor: 'transparent' },
+  abaAtiva: { backgroundColor: '#93BD57', borderColor: '#93BD57' },
   abaTexto: { fontSize: 14, fontWeight: 'bold', color: '#666' },
   abaTextoAtivo: { color: '#FFF' },
 
   lista: { paddingBottom: 40, paddingHorizontal: 20 },
+  columnWrapper: { justifyContent: 'flex-start', gap: gap },
   
-  cardPedido: { backgroundColor: '#FFF', padding: 16, borderRadius: 12, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  cardPedido: { 
+    width: cardWidth,
+    backgroundColor: '#FFF', 
+    padding: 12, 
+    borderRadius: 12, 
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+    marginBottom: 16,
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  idPedido: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-  badgeStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  textoStatus: { fontSize: 12, fontWeight: 'bold' },
+  idPedido: { fontSize: 13, fontWeight: 'bold', color: '#111' },
+  badgeStatus: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  textoStatus: { fontSize: 9, fontWeight: 'bold' },
   
-  textoDetalhe: { fontSize: 14, color: '#555', marginBottom: 4 },
+  textoDetalhe: { fontSize: 12, color: '#555', marginBottom: 2 },
   textoBold: { fontWeight: 'bold', color: '#333' },
   
-  comandaContainer: { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#CCC', borderStyle: 'dashed', borderRadius: 8, padding: 12, marginVertical: 12 },
-  comandaTitulo: { fontSize: 12, fontWeight: 'bold', color: '#777', textAlign: 'center', letterSpacing: 1 },
-  comandaDivisor: { height: 1, backgroundColor: '#DDD', marginVertical: 8 },
-  comandaItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  comandaItemQtd: { fontSize: 14, fontWeight: 'bold', color: '#333', width: 30 },
-  comandaItemNome: { flex: 1, fontSize: 14, color: '#444', paddingRight: 10 },
-  comandaItemPreco: { fontSize: 14, fontWeight: '500', color: '#333' },
+  comandaContainer: { backgroundColor: '#F8F9FA', borderRadius: 8, padding: 8, marginVertical: 10, minHeight: 90 },
+  comandaTitulo: { fontSize: 10, fontWeight: 'bold', color: '#777', textAlign: 'center', letterSpacing: 1 },
+  comandaDivisor: { height: 1, backgroundColor: '#EAEAEA', marginVertical: 6 },
+  comandaItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  comandaItemQtd: { fontSize: 12, fontWeight: 'bold', color: '#333', width: 22 },
+  comandaItemNome: { flex: 1, fontSize: 12, color: '#444', paddingRight: 5 },
+  comandaItemPreco: { fontSize: 12, fontWeight: '500', color: '#333' },
   
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EEE' },
-  textoTotal: { fontSize: 18, fontWeight: 'bold', color: '#2e7d32' },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EAEAEA' },
+  textoTotal: { fontSize: 15, fontWeight: 'bold', color: '#2e7d32' },
   textoVazio: { textAlign: 'center', marginTop: 50, color: '#777', fontSize: 16 },
 
-  // Estilos dos Botões de Ação
-  acoesContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15, gap: 10 },
-  btnAcao: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, flex: 1, alignItems: 'center' },
-  btnRecusar: { backgroundColor: '#D32F2F' },
-  btnAceitar: { backgroundColor: '#2E7D32' },
-  btnPadrao: { backgroundColor: '#1565C0' },
-  btnConcluir: { backgroundColor: '#43A047' },
-  txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  acoesContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 12, gap: 6 },
+  btnAcao: { paddingVertical: 8, paddingHorizontal: 4, borderRadius: 8, flex: 1, alignItems: 'center' },
+  btnRecusar: { backgroundColor: '#D32F2F' }, 
+  btnPadrao: { backgroundColor: '#93BD57' },
+  txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 11 },
 });
