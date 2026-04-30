@@ -39,21 +39,25 @@ export const LoginModel = {
     const userCredential = await signInWithCustomToken(auth, data.token);
     const user = userCredential.user;
 
-    // Procura na coleção de Restaurantes para ver se ele é restaurante
+    // Procura na coleção de Restaurantes
     const restDoc = await getDoc(doc(db, "restaurantes", user.uid));
     if (restDoc.exists()) {
-      // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM
       return { user, tipo: 'restaurante', dados: restDoc.data() }; 
     }
 
-    // Procura na coleção de Consumidores para ver se ele é consumidor
+    // Procura na coleção de Consumidores
     const consDoc = await getDoc(doc(db, "consumidores", user.uid));
     if (consDoc.exists()) {
-      // 👉 AGORA ELE RETORNA AS INFORMAÇÕES (DATA) DO BANCO TAMBÉM
       return { user, tipo: 'consumidor', dados: consDoc.data() };
     }
 
-    // Se logar mas não tiver documento (erro de banco), avisa:
+    // 👉 NOVA VERIFICAÇÃO: Procura na coleção de Entregadores (Motoboys)
+    const motoDoc = await getDoc(doc(db, "entregadores", user.uid));
+    if (motoDoc.exists()) {
+      return { user, tipo: 'motoboy', dados: motoDoc.data() };
+    }
+
+    // Se logar mas não tiver documento em nenhuma das 3 coleções, avisa:
     throw new Error("TIPO_NAO_ENCONTRADO");
   },
 

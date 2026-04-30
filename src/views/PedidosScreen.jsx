@@ -1,18 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, Alert } from 'react-native';
 import { usePedidosController } from '../controllers/usePedidosController';
 import { HeaderRestaurante } from './HeaderRestaurante';
+import { API_URL } from '../config/api.js'; // 👉 Adicionei a API para mandar a nota fiscal daqui também
 
 export function PedidosScreen() {
   const ctrl = usePedidosController();
   const router = useRouter();
 
-  // 👉 Estado para controlar qual aba está ativa (Padrão: Aguardando)
+  // 👉 Estados das abas
   const [abaAtiva, setAbaAtiva] = useState('pendente');
 
-  // 👉 Definição das abas
+  // 👉 Estados do Modal de Finalização (Três pontinhos)
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
+  const [codigoDigitado, setCodigoDigitado] = useState('');
+  const [processando, setProcessando] = useState(false);
+
   const abas = [
     { id: 'pendente', nome: 'Aguardando' },
     { id: 'confirmado', nome: 'Confirmado' },
@@ -35,11 +41,55 @@ export function PedidosScreen() {
     }
   };
 
-  // 👉 Filtragem dos pedidos de acordo com a aba selecionada
   const pedidosFiltrados = ctrl.pedidos.filter(pedido => {
     if (abaAtiva === 'todos') return true;
     return pedido.status === abaAtiva;
   });
+
+  // 👉 Lógica para abrir o modal
+  const abrirModalFinalizar = (pedido) => {
+    setPedidoSelecionado(pedido);
+    setCodigoDigitado('');
+    setModalVisivel(true);
+  };
+
+  // 👉 Lógica para validar o código e finalizar
+  const confirmarFinalizacao = async () => {
+    if (codigoDigitado.trim() !== pedidoSelecionado.codigo_entrega) {
+      return Alert.alert("Código Inválido", "O código não confere com o do cliente.");
+    }
+
+    setProcessando(true);
+    try {
+      // Muda o status usando o controller que você já tem
+      await ctrl.alterarStatus(pedidoSelecionado.id, 'entregue');
+
+      // Dispara a nota fiscal por e-mail (igual o motoboy faz)
+      try {
+        await fetch(`${API_URL}/enviar-nota-fiscal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: pedidoSelecionado.email_consumidor || 'cliente@email.com',
+            itens: pedidoSelecionado.itens,
+            subtotal: pedidoSelecionado.subtotal,
+            taxaEntrega: pedidoSelecionado.taxa_entrega,
+            totalFinal: pedidoSelecionado.total_final,
+            idPedido: pedidoSelecionado.id
+          })
+        });
+      } catch (errEmail) {
+        console.error("Erro ao enviar nota fiscal:", errEmail);
+      }
+
+      setModalVisivel(false);
+      Alert.alert("Sucesso", "Pedido finalizado pelo restaurante!");
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível finalizar o pedido.");
+    } finally {
+      setProcessando(false);
+    }
+  };
 
   const renderPedido = ({ item }) => {
     const statusFormatado = formatarStatus(item.status);
@@ -48,8 +98,19 @@ export function PedidosScreen() {
       <View style={styles.cardPedido}>
         <View style={styles.cardHeader}>
           <Text style={styles.idPedido}>Pedido #{item.id?.substring(0, 6).toUpperCase()}</Text>
-          <View style={[styles.badgeStatus, { backgroundColor: statusFormatado.fundo }]}>
-            <Text style={[styles.textoStatus, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
+          
+          {/* 👉 Agrupei o status com os três pontinhos */}
+          <View style={styles.headerAcoes}>
+            <View style={[styles.badgeStatus, { backgroundColor: statusFormatado.fundo }]}>
+              <Text style={[styles.textoStatus, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
+            </View>
+            
+            {/* Só mostra os 3 pontinhos se o pedido não estiver finalizado/recusado */}
+            {item.status !== 'entregue' && item.status !== 'recusado' && (
+              <TouchableOpacity style={styles.btnTresPontos} onPress={() => abrirModalFinalizar(item)}>
+                <Ionicons name="ellipsis-vertical" size={20} color="#555" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -83,7 +144,7 @@ export function PedidosScreen() {
           <Text style={styles.textoTotal}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
         </View>
 
-        {/* 👉 BOTÕES DE AÇÃO DINÂMICOS BASEADOS NO STATUS */}
+        {/* 👉 BOTÕES DE AÇÃO INFERIORES */}
         <View style={styles.acoesContainer}>
           {item.status === 'pendente' && (
             <>
@@ -107,14 +168,7 @@ export function PedidosScreen() {
               <Text style={styles.txtBtnBranco}>Despachar / Saiu Entrega</Text>
             </TouchableOpacity>
           )}
-
-          {item.status === 'saiu_entrega' && (
-            <TouchableOpacity style={[styles.btnAcao, styles.btnConcluir]} onPress={() => ctrl.alterarStatus(item.id, 'entregue')}>
-              <Text style={styles.txtBtnBranco}>Marcar como Entregue</Text>
-            </TouchableOpacity>
-          )}
         </View>
-
       </View>
     );
   };
@@ -131,7 +185,6 @@ export function PedidosScreen() {
           <Text style={styles.titulo}>Gestão de Pedidos</Text>
         </View>
 
-        {/* 👉 ABAS NAVEGÁVEIS */}
         <View style={styles.abasContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {abas.map((aba) => (
@@ -157,12 +210,56 @@ export function PedidosScreen() {
             renderItem={renderPedido}
             contentContainerStyle={styles.lista}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <Text style={styles.textoVazio}>Nenhum pedido nesta aba.</Text>
-            }
+            ListEmptyComponent={<Text style={styles.textoVazio}>Nenhum pedido nesta aba.</Text>}
           />
         )}
       </View>
+
+      {/* 👉 MODAL DE FINALIZAÇÃO */}
+      <Modal visible={modalVisivel} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="shield-checkmark" size={40} color="#2E7D32" style={{ marginBottom: 10 }} />
+            <Text style={styles.modalTitulo}>Finalizar Pedido</Text>
+            <Text style={styles.modalSub}>
+              Insira o código de 4 dígitos informado pelo cliente para concluir a entrega/retirada.
+            </Text>
+
+            <TextInput
+              style={styles.inputCodigo}
+              placeholder="0000"
+              keyboardType="numeric"
+              maxLength={4}
+              value={codigoDigitado}
+              onChangeText={setCodigoDigitado}
+              editable={!processando}
+            />
+
+            <View style={styles.modalBotoes}>
+              <TouchableOpacity 
+                style={styles.btnModalCancel} 
+                onPress={() => setModalVisivel(false)}
+                disabled={processando}
+              >
+                <Text style={styles.txtBtnModal}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.btnModalConfirm, codigoDigitado.length < 4 && { backgroundColor: '#A5D6A7' }]} 
+                onPress={confirmarFinalizacao}
+                disabled={codigoDigitado.length < 4 || processando}
+              >
+                {processando ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.txtBtnModal}>Validar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -175,7 +272,6 @@ const styles = StyleSheet.create({
   botaoVoltar: { marginRight: 15, padding: 4 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   
-  // Estilos das Abas
   abasContainer: { borderBottomWidth: 1, borderBottomColor: '#DDD', paddingBottom: 10, paddingHorizontal: 20, marginBottom: 15 },
   abaBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#EEE', marginRight: 10 },
   abaAtiva: { backgroundColor: '#2E7D32' },
@@ -186,6 +282,8 @@ const styles = StyleSheet.create({
   
   cardPedido: { backgroundColor: '#FFF', padding: 16, borderRadius: 12, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  headerAcoes: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  btnTresPontos: { padding: 4 },
   idPedido: { fontSize: 16, fontWeight: 'bold', color: '#111' },
   badgeStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   textoStatus: { fontSize: 12, fontWeight: 'bold' },
@@ -205,12 +303,21 @@ const styles = StyleSheet.create({
   textoTotal: { fontSize: 18, fontWeight: 'bold', color: '#2e7d32' },
   textoVazio: { textAlign: 'center', marginTop: 50, color: '#777', fontSize: 16 },
 
-  // Estilos dos Botões de Ação
   acoesContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15, gap: 10 },
   btnAcao: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, flex: 1, alignItems: 'center' },
   btnRecusar: { backgroundColor: '#D32F2F' },
   btnAceitar: { backgroundColor: '#2E7D32' },
   btnPadrao: { backgroundColor: '#1565C0' },
-  btnConcluir: { backgroundColor: '#43A047' },
   txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+
+  // 👉 Estilos do Modal de Finalização
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 350, backgroundColor: '#FFF', padding: 24, borderRadius: 16, alignItems: 'center', elevation: 5 },
+  modalTitulo: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 8 },
+  modalSub: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  inputCodigo: { width: '100%', backgroundColor: '#F5F5F5', borderRadius: 8, padding: 15, fontSize: 28, fontWeight: 'bold', textAlign: 'center', letterSpacing: 8, marginBottom: 20, color: '#111' },
+  modalBotoes: { flexDirection: 'row', width: '100%', gap: 12 },
+  btnModalCancel: { flex: 1, paddingVertical: 14, backgroundColor: '#E0E0E0', borderRadius: 8, alignItems: 'center' },
+  btnModalConfirm: { flex: 1, paddingVertical: 14, backgroundColor: '#2E7D32', borderRadius: 8, alignItems: 'center' },
+  txtBtnModal: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
 });

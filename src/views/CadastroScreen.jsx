@@ -71,7 +71,7 @@ export function CadastroScreen() {
             userSnap = await getDoc(userRef);
           }
           if (!userSnap.exists()) {
-            const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+            const telaDestino = ctrl.tipoUsuario === 'restaurante' ? '/completar-cadastro-restaurante' : '/completar-cadastro';
             router.push({
               pathname: telaDestino,
               params: { uid: user.uid, nome: user.displayName || 'Usuário FitWay', email: user.email }
@@ -108,7 +108,7 @@ export function CadastroScreen() {
             userSnap = await getDoc(userRef);
           }
           if (!userSnap.exists()) {
-            const telaDestino = ctrl.isRestaurante ? '/completar-cadastro-restaurante' : '/completar-cadastro';
+            const telaDestino = ctrl.tipoUsuario === 'restaurante' ? '/completar-cadastro-restaurante' : '/completar-cadastro';
             router.push({
               pathname: telaDestino,
               params: { uid: user.uid, nome: user.displayName || 'Usuário FitWay', email: user.email }
@@ -171,10 +171,6 @@ export function CadastroScreen() {
     if (selectedDate) ctrl.setDataNascimento(formatarDataParaString(selectedDate));
   };
 
-  const alternarTipo = () => {
-    ctrl.setIsRestaurante(!ctrl.isRestaurante);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#F2E3BB" barStyle="dark-content" />
@@ -189,18 +185,33 @@ export function CadastroScreen() {
           ) : (
             <View style={styles.rightItems}>
               <TouchableOpacity
-                style={[styles.restauranteGroup, ctrl.isRestaurante && styles.restauranteAtivo]}
-                onPress={alternarTipo}
+                style={[styles.restauranteGroup, ctrl.tipoUsuario === 'consumidor' && styles.restauranteAtivo]}
+                onPress={() => ctrl.setTipoUsuario('consumidor')}
+              >
+                <Text style={[styles.restauranteText, ctrl.tipoUsuario === 'consumidor' && styles.restauranteTextAtivo]}>
+                  Sou cliente
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.restauranteGroup, ctrl.tipoUsuario === 'restaurante' && styles.restauranteAtivo]}
+                onPress={() => ctrl.setTipoUsuario('restaurante')}
               >
                 <Image source={store} style={styles.storeIcon} resizeMode="contain" />
-                <Text style={[styles.restauranteText, ctrl.isRestaurante && styles.restauranteTextAtivo]}>
+                <Text style={[styles.restauranteText, ctrl.tipoUsuario === 'restaurante' && styles.restauranteTextAtivo]}>
                   Sou restaurante
                 </Text>
               </TouchableOpacity>
-              <View style={styles.ambienteGroup}>
-                <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-                <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
-              </View>
+
+              <TouchableOpacity
+                style={[styles.restauranteGroup, ctrl.tipoUsuario === 'motoboy' && styles.restauranteAtivo]}
+                onPress={() => ctrl.setTipoUsuario('motoboy')}
+              >
+                <Ionicons name="bicycle-outline" size={22} color={ctrl.tipoUsuario === 'motoboy' ? "#FFF" : "#555"} />
+                <Text style={[styles.restauranteText, ctrl.tipoUsuario === 'motoboy' && styles.restauranteTextAtivo]}>
+                  Quero entregar
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -210,24 +221,35 @@ export function CadastroScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Opções</Text>
+              <Text style={styles.modalTitle}>Escolha o tipo de conta</Text>
               <TouchableOpacity onPress={() => setMenuVisible(false)}>
                 <Ionicons name="close" size={30} color="#555" />
               </TouchableOpacity>
             </View>
+            
             <TouchableOpacity
-              style={[styles.modalItem, ctrl.isRestaurante && styles.restauranteAtivo]}
-              onPress={() => { alternarTipo(); setMenuVisible(false); }}
+              style={[styles.modalItem, ctrl.tipoUsuario === 'consumidor' && styles.restauranteAtivo]}
+              onPress={() => { ctrl.setTipoUsuario('consumidor'); setMenuVisible(false); }}
+            >
+              <Ionicons name="person-outline" size={24} color={ctrl.tipoUsuario === 'consumidor' ? "#FFF" : "#555"} />
+              <Text style={[styles.modalItemText, ctrl.tipoUsuario === 'consumidor' && styles.restauranteTextAtivo]}>Sou cliente</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalItem, ctrl.tipoUsuario === 'restaurante' && styles.restauranteAtivo]}
+              onPress={() => { ctrl.setTipoUsuario('restaurante'); setMenuVisible(false); }}
             >
               <Image source={store} style={styles.storeIcon} resizeMode="contain" />
-              <Text style={[styles.modalItemText, ctrl.isRestaurante && styles.restauranteTextAtivo]}>
-                Sou restaurante
-              </Text>
+              <Text style={[styles.modalItemText, ctrl.tipoUsuario === 'restaurante' && styles.restauranteTextAtivo]}>Sou restaurante</Text>
             </TouchableOpacity>
-            <View style={styles.modalItem}>
-              <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
-              <Text style={styles.modalItemText}>Ambiente 100% seguro</Text>
-            </View>
+
+            <TouchableOpacity
+              style={[styles.modalItem, ctrl.tipoUsuario === 'motoboy' && styles.restauranteAtivo]}
+              onPress={() => { ctrl.setTipoUsuario('motoboy'); setMenuVisible(false); }}
+            >
+              <Ionicons name="bicycle-outline" size={24} color={ctrl.tipoUsuario === 'motoboy' ? "#FFF" : "#555"} />
+              <Text style={[styles.modalItemText, ctrl.tipoUsuario === 'motoboy' && styles.restauranteTextAtivo]}>Quero entregar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -237,11 +259,58 @@ export function CadastroScreen() {
           <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.formContainer}>
               <Text style={styles.titulo}>Vamos começar?</Text>
-              <Text style={styles.subtitulo}>Complete os dados e crie seu cadastro</Text>
+              <Text style={styles.subtitulo}>
+                {ctrl.tipoUsuario === 'motoboy' ? 'Cadastre-se para realizar entregas' : 'Complete os dados e crie seu cadastro'}
+              </Text>
 
               {ctrl.erro ? <Text style={styles.erroTexto}>{ctrl.erro}</Text> : null}
 
-              {!ctrl.isRestaurante ? (
+              {ctrl.tipoUsuario === 'restaurante' ? (
+                <>
+                  <Text style={styles.label}>Nome Fantasia</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ctrl.nomeFantasia}
+                    onChangeText={ctrl.setNomeFantasia}
+                    maxLength={100}
+                    placeholder="Nome Fantasia"
+                    placeholderTextColor="#A0A0A0"
+                  />
+
+                  <Text style={styles.label}>Razão Social</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ctrl.razaoSocial}
+                    onChangeText={ctrl.setRazaoSocial}
+                    maxLength={100}
+                    placeholder="Razão Social"
+                    placeholderTextColor="#A0A0A0"
+                  />
+
+                  <Text style={styles.label}>CNPJ</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ctrl.cnpj}
+                    onChangeText={ctrl.handleCnpjChange}
+                    maxLength={18}
+                    keyboardType="numeric"
+                    placeholder="CNPJ"
+                    placeholderTextColor="#A0A0A0"
+                  />
+
+                  <Text style={styles.label}>E-mail comercial</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ctrl.email}
+                    onChangeText={ctrl.setEmail}
+                    maxLength={100}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="E-mail"
+                    placeholderTextColor="#A0A0A0"
+                  />
+                </>
+              ) : (
                 <>
                   <Text style={styles.label}>Nome completo</Text>
                   <TextInput
@@ -290,68 +359,40 @@ export function CadastroScreen() {
                       />
                     </View>
                     <View style={styles.halfColumn}>
-                      <Text style={styles.label}>Data de nascimento</Text>
-                      <View style={styles.dateInputContainer}>
-                        <TextInput
-                          style={styles.dateInputText}
-                          value={ctrl.dataNascimento}
-                          onChangeText={handleDataChange}
-                          placeholder="DD/MM/AAAA"
-                          placeholderTextColor="#A0A0A0"
-                          keyboardType="numeric"
-                          maxLength={10}
-                        />
-                        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateIcon} activeOpacity={0.6}>
-                          <Ionicons name="calendar-outline" size={22} color="#93BD57" />
-                        </TouchableOpacity>
-                      </View>
+                      {ctrl.tipoUsuario === 'motoboy' ? (
+                        <>
+                          <Text style={styles.label}>Placa do Veículo</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={ctrl.placaVeiculo}
+                            onChangeText={ctrl.setPlacaVeiculo}
+                            autoCapitalize="characters"
+                            maxLength={8}
+                            placeholder="ABC-1234"
+                            placeholderTextColor="#A0A0A0"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.label}>Data de nascimento</Text>
+                          <View style={styles.dateInputContainer}>
+                            <TextInput
+                              style={styles.dateInputText}
+                              value={ctrl.dataNascimento}
+                              onChangeText={handleDataChange}
+                              placeholder="DD/MM/AAAA"
+                              placeholderTextColor="#A0A0A0"
+                              keyboardType="numeric"
+                              maxLength={10}
+                            />
+                            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateIcon} activeOpacity={0.6}>
+                              <Ionicons name="calendar-outline" size={22} color="#93BD57" />
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
                     </View>
                   </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.label}>Nome Fantasia</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={ctrl.nomeFantasia}
-                    onChangeText={ctrl.setNomeFantasia}
-                    maxLength={100}
-                    placeholder="Nome Fantasia"
-                    placeholderTextColor="#A0A0A0"
-                  />
-
-                  <Text style={styles.label}>Razão Social</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={ctrl.razaoSocial}
-                    onChangeText={ctrl.setRazaoSocial}
-                    maxLength={100}
-                    placeholder="Razão Social"
-                    placeholderTextColor="#A0A0A0"
-                  />
-
-                  <Text style={styles.label}>CNPJ</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={ctrl.cnpj}
-                    onChangeText={ctrl.handleCnpjChange}
-                    maxLength={18}
-                    keyboardType="numeric"
-                    placeholder="CNPJ"
-                    placeholderTextColor="#A0A0A0"
-                  />
-
-                  <Text style={styles.label}>E-mail comercial</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={ctrl.email}
-                    onChangeText={ctrl.setEmail}
-                    maxLength={100}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholder="E-mail"
-                    placeholderTextColor="#A0A0A0"
-                  />
                 </>
               )}
 
@@ -414,7 +455,7 @@ const styles = StyleSheet.create({
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' },
   logo: { width: 110, height: 55 },
   menuButton: { padding: 5 },
-  rightItems: { flexDirection: 'row', alignItems: 'center', gap: 40 },
+  rightItems: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   restauranteGroup: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
   restauranteAtivo: { backgroundColor: '#93BD57' },
   restauranteText: { fontSize: 14, color: '#555', fontWeight: '600', marginLeft: 8 },
@@ -424,7 +465,7 @@ const styles = StyleSheet.create({
   ambienteText: { fontSize: 14, color: '#555', fontWeight: '600', marginLeft: 8 },
   vectorIcon: { width: 22, height: 22 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#F2E3BB', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, minHeight: 200 },
+  modalContent: { backgroundColor: '#F2E3BB', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, minHeight: 300 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#2A2D34' },
   modalItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 10, borderRadius: 10, marginBottom: 10 },
@@ -433,8 +474,8 @@ const styles = StyleSheet.create({
   leftColumn: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 30, paddingVertical: 20 },
   formContainer: { width: '100%', maxWidth: 587, alignSelf: 'center' },
-  titulo: { color: '#000', textAlign: 'center', fontFamily: 'Inter', fontSize: 57, fontStyle: 'italic', fontWeight: '800', lineHeight: 64, letterSpacing: -0.25, marginBottom: 20 },
-  subtitulo: { color: '#000', textAlign: 'center', fontFamily: 'Nunito', fontSize: 28, fontStyle: 'italic', fontWeight: '700', lineHeight: 36, marginBottom: 30 },
+  titulo: { color: '#000', textAlign: 'center', fontFamily: 'Inter', fontSize: 50, fontStyle: 'italic', fontWeight: '800', lineHeight: 58, letterSpacing: -0.25, marginBottom: 15 },
+  subtitulo: { color: '#000', textAlign: 'center', fontFamily: 'Nunito', fontSize: 24, fontStyle: 'italic', fontWeight: '700', lineHeight: 32, marginBottom: 30 },
   label: { color: '#2A2D34', fontFamily: 'Nunito', fontSize: 16, fontWeight: '600', marginBottom: 6, alignSelf: 'flex-start' },
   input: { backgroundColor: '#FAF8F3', borderRadius: 5, borderWidth: 0, paddingVertical: 14, paddingHorizontal: 16, fontSize: 16, color: '#333', width: '100%', marginBottom: 20 },
   rowContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, marginBottom: 20 },

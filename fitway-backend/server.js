@@ -3,9 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
-const PDFDocument = require('pdfkit'); // 👉 Nova dependência para PDF
+const PDFDocument = require('pdfkit');
 
-// Inicializando o Firebase Admin
+// --- INICIALIZAÇÃO DO FIREBASE ---
 const serviceAccount = require('./firebase-credentials.json');
 
 admin.initializeApp({
@@ -14,10 +14,11 @@ admin.initializeApp({
 
 const db = admin.firestore();
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// --- CONFIGURAÇÃO DO E-MAIL (NODEMAILER) ---
+// --- CONFIGURAÇÃO DO NODEMAILER ---
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -26,10 +27,32 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// --- TEMPLATE VISUAL PARA E-MAILS DE CÓDIGO ---
+const gerarEmailTemplate = (codigo, mensagem) => `
+  <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center; color: #333; padding: 40px; background-color: #f9f9f9;">
+    <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+      <h1 style="color: #2E7D32; margin-bottom: 5px; font-size: 32px;">FitWay</h1>
+      <p style="font-size: 16px; color: #666; margin-bottom: 25px;">${mensagem}</p>
+      
+      <div style="background-color: #F4FBF4; border: 2px dashed #8CC63F; border-radius: 10px; padding: 20px; display: inline-block; margin-bottom: 25px;">
+        <span style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #111;">
+          ${codigo}
+        </span>
+      </div>
+      
+      <p style="font-size: 13px; color: #999; border-top: 1px solid #eee; padding-top: 20px;">
+        Este código expira em <b>10 minutos</b>.<br>
+        Se você não solicitou este acesso, apenas ignore este e-mail.
+      </p>
+    </div>
+  </div>
+`;
+
 // =========================================================
-// ROTAS DE RECUPERAÇÃO E LOGIN (MANTIDAS)
+// ROTAS DE RECUPERAÇÃO E LOGIN
 // =========================================================
 
+// 1. Enviar código para Recuperação de Senha
 app.post('/esqueci-senha', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ erro: "E-mail não fornecido." });
@@ -47,80 +70,99 @@ app.post('/esqueci-senha', async (req, res) => {
     expiraEm.setMinutes(expiraEm.getMinutes() + 10);
 
     await db.collection('CodigosRecuperacao').doc(email).set({
-      codigo: codigo,
-      expiraEm: expiraEm,
+      codigo,
+      expiraEm,
       criadoEm: new Date()
     });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: '"Equipe FitWay 🥗" <devsystemimpacta@gmail.com>',
       to: email,
       subject: 'Seu código de recuperação - FitWay',
-      html: `<div style="font-family: Arial; text-align: center;"><h2 style="color: #8CC63F;">FitWay</h2><p>Código: <b>${codigo}</b></p></div>`
-    };
+      html: gerarEmailTemplate(codigo, 'Seu código de acesso seguro para <b>recuperar sua senha</b> é:')
+    });
 
-    await transporter.sendMail(mailOptions);
     return res.status(200).json({ sucesso: true });
   } catch (error) {
-    return res.status(500).json({ erro: "Erro interno." });
+    return res.status(500).json({ erro: "Erro interno ao processar recuperação." });
   }
 });
 
+// 2. Verificar código de recuperação
 app.post('/verificar-codigo', async (req, res) => {
   const { email, codigo } = req.body;
   try {
     const doc = await db.collection('CodigosRecuperacao').doc(email).get();
-    if (!doc.exists || doc.data().codigo !== String(codigo)) return res.status(400).json({ message: "Inválido" });
+    if (!doc.exists || doc.data().codigo !== String(codigo)) {
+      return res.status(400).json({ message: "Código inválido ou expirado." });
+    }
     return res.status(200).json({ message: "OK" });
-  } catch (error) { return res.status(500).json({ message: "Erro" }); }
+  } catch (error) { 
+    return res.status(500).json({ message: "Erro ao verificar código." }); 
+  }
 });
 
+// 3. Atualizar Senha Final
 app.post('/atualizar-senha', async (req, res) => {
   const { email, novaSenha } = req.body;
   try {
     const userRecord = await admin.auth().getUserByEmail(email);
     await admin.auth().updateUser(userRecord.uid, { password: novaSenha });
     await db.collection('CodigosRecuperacao').doc(email).delete();
-    return res.status(200).json({ message: "Sucesso" });
-  } catch (error) { return res.status(500).json({ message: "Erro" }); }
+    return res.status(200).json({ message: "Senha atualizada com sucesso!" });
+  } catch (error) { 
+    return res.status(500).json({ message: "Erro ao atualizar senha." }); 
+  }
 });
 
+// 4. Enviar código de Login (Acesso Rápido)
 app.post('/enviar-codigo-login', async (req, res) => {
   const { email } = req.body;
   try {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
     const expiraEm = new Date();
     expiraEm.setMinutes(expiraEm.getMinutes() + 10);
+    
     await db.collection('CodigosLogin').doc(email).set({ codigo, expiraEm });
+    
     await transporter.sendMail({
-      from: '"FitWay 🥗"',
+      from: '"FitWay 🥗" <devsystemimpacta@gmail.com>',
       to: email,
-      subject: 'Código de Acesso',
-      html: `<h1>${codigo}</h1>`
+      subject: 'Código de Acesso - FitWay',
+      html: gerarEmailTemplate(codigo, 'Seu código de acesso seguro para <b>entrar no aplicativo</b> é:')
     });
+    
     return res.status(200).json({ sucesso: true });
-  } catch (error) { return res.status(500).json({ erro: "Erro" }); }
+  } catch (error) { 
+    return res.status(500).json({ erro: "Erro ao enviar código de login." }); 
+  }
 });
 
+// 5. Verificar código de Login e gerar Token
 app.post('/verificar-codigo-login', async (req, res) => {
   const { email, codigo } = req.body;
   try {
     const doc = await db.collection('CodigosLogin').doc(email).get();
-    if (!doc.exists || doc.data().codigo !== String(codigo)) return res.status(400).json({ erro: "Inválido" });
+    if (!doc.exists || doc.data().codigo !== String(codigo)) {
+      return res.status(400).json({ erro: "Código inválido." });
+    }
     const userRecord = await admin.auth().getUserByEmail(email);
     const token = await admin.auth().createCustomToken(userRecord.uid);
     return res.status(200).json({ token });
-  } catch (error) { return res.status(500).json({ erro: "Erro" }); }
+  } catch (error) { 
+    return res.status(500).json({ erro: "Erro na autenticação." }); 
+  }
 });
 
 // =========================================================
-// ROTA 6: ENVIAR NOTA FISCAL EM PDF
+// ROTA DE NOTA FISCAL (PDF)
 // =========================================================
+
 app.post('/enviar-nota-fiscal', async (req, res) => {
   const { email, itens, subtotal, taxaEntrega, totalFinal, idPedido } = req.body;
 
   if (!email || !itens) {
-    return res.status(400).json({ erro: "Dados insuficientes." });
+    return res.status(400).json({ erro: "Dados insuficientes para gerar nota." });
   }
 
   try {
@@ -135,7 +177,7 @@ app.post('/enviar-nota-fiscal', async (req, res) => {
         from: '"FitWay 🥗 - Financeiro" <devsystemimpacta@gmail.com>',
         to: email,
         subject: `Nota Fiscal - Pedido #${idPedido.substring(0, 8)}`,
-        text: 'Olá! Obrigado por comprar no FitWay. Sua nota fiscal está em anexo.',
+        text: 'Olá! Sua nota fiscal do FitWay já chegou. Ela está anexada a este e-mail em formato PDF.',
         attachments: [
           {
             filename: `NotaFiscal_FitWay_${idPedido.substring(0, 8)}.pdf`,
@@ -145,11 +187,11 @@ app.post('/enviar-nota-fiscal', async (req, res) => {
       };
 
       await transporter.sendMail(mailOptions);
-      console.log(`[PDF ENVIADO] ${email}`);
+      console.log(`[NF ENVIADA] Destinatário: ${email}`);
     });
 
-    // --- DESENHANDO O PDF ---
-    doc.fillColor('#8CC63F').fontSize(22).text('FITWAY - RECIBO DE COMPRA', { align: 'center' });
+    // --- CONSTRUÇÃO DO PDF ---
+    doc.fillColor('#2E7D32').fontSize(22).text('FITWAY - RECIBO DE COMPRA', { align: 'center' });
     doc.moveDown();
     
     doc.fillColor('#333').fontSize(10).text(`ID DO PEDIDO: ${idPedido}`);
@@ -158,13 +200,13 @@ app.post('/enviar-nota-fiscal', async (req, res) => {
     doc.text('----------------------------------------------------------------------------------------------------');
     doc.moveDown();
 
-    // Cabeçalho da Tabela
+    // Cabeçalho
     doc.fontSize(12).text('Item', 50, doc.y, { continued: true });
     doc.text('Qtd', 350, doc.y, { continued: true });
     doc.text('Preço', 450, doc.y);
     doc.moveDown(0.5);
 
-    // Itens
+    // Itens da lista
     itens.forEach(item => {
       doc.fontSize(10).fillColor('#555');
       const y = doc.y;
@@ -178,12 +220,12 @@ app.post('/enviar-nota-fiscal', async (req, res) => {
     doc.fillColor('#333').text('----------------------------------------------------------------------------------------------------');
     doc.moveDown();
 
-    // Totais
+    // Resumo de valores
     doc.fontSize(12);
     doc.text(`SUBTOTAL: R$ ${subtotal.toFixed(2)}`, { align: 'right' });
     doc.text(`TAXA ENTREGA: R$ ${taxaEntrega.toFixed(2)}`, { align: 'right' });
     doc.moveDown(0.5);
-    doc.fillColor('#8CC63F').fontSize(16).text(`TOTAL FINAL: R$ ${totalFinal.toFixed(2)}`, { align: 'right' });
+    doc.fillColor('#2E7D32').fontSize(16).text(`TOTAL FINAL: R$ ${totalFinal.toFixed(2)}`, { align: 'right' });
 
     doc.moveDown(5);
     doc.fontSize(8).fillColor('#999').text('FitWay Alimentação Saudável LTDA - Documento sem valor fiscal (Simulação Acadêmica)', { align: 'center' });
@@ -192,13 +234,15 @@ app.post('/enviar-nota-fiscal', async (req, res) => {
     return res.status(200).json({ sucesso: true });
 
   } catch (error) {
-    console.error("Erro PDF:", error);
-    return res.status(500).json({ erro: "Erro ao gerar PDF." });
+    console.error("Erro ao gerar PDF:", error);
+    return res.status(500).json({ erro: "Erro ao gerar nota fiscal." });
   }
 });
 
-// --- INICIALIZAÇÃO ---
+// --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor FitWay rodando na porta ${PORT} 🥗`);
+  console.log(`
+  🥗 SERVIDOR FITWAY RODANDO NA PORTA ${PORT}
+  `);
 });

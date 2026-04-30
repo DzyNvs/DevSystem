@@ -1,4 +1,4 @@
-// 👉 Note que agora tem apenas ../../ (dois níveis) em vez de três
+// 👉 COLOQUE as chaves!
 import { MeusPedidosScreen } from '../../src/views/MeusPedidosScreen';
 
 export default function MeusPedidosRoute() {

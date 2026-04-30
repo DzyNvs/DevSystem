@@ -1,15 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react'; // 👉 Importamos o useState para as abas
+import { useState } from 'react'; 
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useMeusPedidosController } from '../controllers/useMeusPedidosController';
-import { HeaderConsumidor } from './HeaderConsumidor';
+import { HeaderConsumidor } from './HeaderConsumidor'; // Importe seu header!
 
 export function MeusPedidosScreen() {
   const ctrl = useMeusPedidosController();
   const router = useRouter();
 
-  // 👉 Estado para controlar a aba selecionada (padrão: em andamento)
   const [abaAtiva, setAbaAtiva] = useState('andamento');
 
   const formatarData = (timestamp) => {
@@ -18,7 +17,6 @@ export function MeusPedidosScreen() {
     return data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 👉 Deixei a etiqueta de status colorida igual a do restaurante!
   const formatarStatus = (status) => {
     switch (status) {
       case 'pendente': return { texto: 'Aguardando', cor: '#E65100', fundo: '#FFF3E0' };
@@ -32,13 +30,10 @@ export function MeusPedidosScreen() {
     }
   };
 
-  // 👉 Lógica de filtragem baseada na aba
   const pedidosExibidos = ctrl.pedidos.filter(pedido => {
     if (abaAtiva === 'andamento') {
-      // Aparece na primeira aba se NÃO estiver finalizado ou cancelado
       return ['pendente', 'confirmado', 'preparando', 'saiu_entrega'].includes(pedido.status);
     } else {
-      // Aparece na aba de Histórico se já acabou
       return ['entregue', 'recusado', 'cancelado'].includes(pedido.status);
     }
   });
@@ -47,52 +42,64 @@ export function MeusPedidosScreen() {
     const statusFormatado = formatarStatus(item.status);
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.data}>{formatarData(item.data_criacao)}</Text>
-          <View style={[styles.badge, { backgroundColor: statusFormatado.fundo }]}>
-            <Text style={[styles.badgeText, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
+      <TouchableOpacity 
+        activeOpacity={0.8}
+        onPress={() => {
+          if (abaAtiva === 'andamento') {
+            router.push({
+              pathname: '/acompanhamento', 
+              params: { idPedido: item.id }
+            });
+          }
+        }}
+      >
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.data}>{formatarData(item.data_criacao)}</Text>
+            <View style={[styles.badge, { backgroundColor: statusFormatado.fundo }]}>
+              <Text style={[styles.badgeText, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.divisor} />
+          
+          <Text style={styles.itensResumo} numberOfLines={2}>
+            {item.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ')}
+          </Text>
+          
+          <View style={styles.cardFooter}>
+            <Text style={styles.totalLabel}>Total pago:</Text>
+            <Text style={styles.totalValor}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
           </View>
         </View>
-        
-        <View style={styles.divisor} />
-        
-        <Text style={styles.itensResumo} numberOfLines={2}>
-          {item.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ')}
-        </Text>
-        
-        <View style={styles.cardFooter}>
-          <Text style={styles.totalLabel}>Total pago:</Text>
-          <Text style={styles.totalValor}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
+  // 👉 O RETORNO DA TELA QUE ESTAVA FALTANDO!
   return (
     <View style={styles.container}>
-      <HeaderConsumidor />
+      {/* Se quiser usar o seu Header global aqui, descomente a linha abaixo */}
+      {/* <HeaderConsumidor /> */}
       
       <View style={styles.content}>
-        
         <View style={styles.headerTitleContainer}>
           <TouchableOpacity onPress={() => router.back()} style={styles.botaoVoltar}>
-            <Ionicons name="arrow-back" size={26} color="#333" />
+            <Ionicons name="arrow-back" size={24} color="#2E7D32" />
           </TouchableOpacity>
           <Text style={styles.titulo}>Meus Pedidos</Text>
         </View>
 
-        {/* 👉 NAVEGAÇÃO POR ABAS */}
         <View style={styles.abasContainer}>
           <TouchableOpacity 
-            style={[styles.abaBtn, abaAtiva === 'andamento' && styles.abaBtnAtiva]} 
+            style={[styles.abaBtn, abaAtiva === 'andamento' && styles.abaBtnAtiva]}
             onPress={() => setAbaAtiva('andamento')}
           >
-            <Text style={[styles.abaTexto, abaAtiva === 'andamento' && styles.abaTextoAtiva]}>Em Andamento</Text>
+            <Text style={[styles.abaTexto, abaAtiva === 'andamento' && styles.abaTextoAtiva]}>Em andamento</Text>
           </TouchableOpacity>
-
+          
           <TouchableOpacity 
-            style={[styles.abaBtn, abaAtiva === 'historico' && styles.abaBtnAtiva]} 
+            style={[styles.abaBtn, abaAtiva === 'historico' && styles.abaBtnAtiva]}
             onPress={() => setAbaAtiva('historico')}
           >
             <Text style={[styles.abaTexto, abaAtiva === 'historico' && styles.abaTextoAtiva]}>Histórico</Text>
@@ -107,15 +114,10 @@ export function MeusPedidosScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.lista}
-            showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.vazioContainer}>
-                <Ionicons name="receipt-outline" size={64} color="#CCC" />
-                <Text style={styles.vazioText}>
-                  {abaAtiva === 'andamento' 
-                    ? 'Você não tem nenhum pedido em andamento.' 
-                    : 'Seu histórico de pedidos está vazio.'}
-                </Text>
+                <Ionicons name="receipt-outline" size={60} color="#CCC" />
+                <Text style={styles.vazioText}>Nenhum pedido encontrado nesta aba.</Text>
               </View>
             }
           />
@@ -133,7 +135,6 @@ const styles = StyleSheet.create({
   botaoVoltar: { marginRight: 15, padding: 4 },
   titulo: { fontSize: 28, fontWeight: 'bold', color: '#2E7D32' },
 
-  // 👉 Estilos das Abas
   abasContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: '#E8F5E9', borderRadius: 8, padding: 4 },
   abaBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6 },
   abaBtnAtiva: { backgroundColor: '#2E7D32', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 3 },

@@ -6,8 +6,6 @@ import { PedidoModel } from '../models/PedidoModel';
 import { RestauranteModel } from '../models/RestauranteModel'; 
 import { useCarrinhoStore } from './useCarrinhoStore';
 
-import { API_URL } from '../config/api.js';
-
 export const usePagamentoController = () => {
   const itens = useCarrinhoStore((state) => state.itens) || [];
   const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId); 
@@ -99,51 +97,45 @@ export const usePagamentoController = () => {
         linkPagamento = await gerarPagamentoMercadoPago();
       }
 
+      // 👉 1. GERAR O CÓDIGO DE ENTREGA (4 dígitos aleatórios)
+      const codigoEntrega = Math.floor(1000 + Math.random() * 9000).toString();
+
+      // 👉 2. INCLUINDO OS NOVOS CAMPOS DE STATUS E CÓDIGO
       const dadosPedido = {
         id_restaurante: idRestauranteAtual,
         id_consumidor: user.uid, 
+        id_motorista: null, // Começa vazio, o motorista assume depois
+        status: 'pendente', // Pipeline: pendente -> preparando -> saiu_entrega -> entregue
+        codigo_entrega: codigoEntrega, // Código que o cliente passa pro motoboy
         itens: itens,
         subtotal,
         taxa_entrega: taxaEntrega,
         total_final: totalFinal,
         link_pagamento: linkPagamento,
         tipo_pagamento: tipoPagamento,
-        forma_pagamento: tipoPagamento === 'online' ? 'mercado_pago' : formaPagamentoEntrega
+        forma_pagamento: tipoPagamento === 'online' ? 'mercado_pago' : formaPagamentoEntrega,
+        criado_em: new Date().toISOString()
       };
 
-      // 1. Salva o Pedido no Firebase e pega o ID gerado
+      // Salva o Pedido no Firebase e pega o ID gerado
       const idPedidoGerado = await PedidoModel.criarPedido(dadosPedido);
 
-      // 👉 2. NOVO: Dispara a requisição para o servidor enviar a Nota Fiscal por e-mail
-      try {
-        await fetch(`${API_URL}/enviar-nota-fiscal`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email, 
-            itens: itens,
-            subtotal: subtotal,
-            taxaEntrega: taxaEntrega,
-            totalFinal: totalFinal,
-            idPedido: idPedidoGerado
-          })
-        });
-        console.log("Comando de envio de nota fiscal disparado com sucesso.");
-      } catch (errEmail) {
-        console.error("Erro ao solicitar envio de e-mail da nota:", errEmail);
-        // O erro no envio de email não impede a conclusão do pedido
-      }
-
-      // 3. Limpa o carrinho após sucesso
+      // Limpa o carrinho após sucesso
       limparCarrinho();
 
-      // 4. Abre o navegador SÓ SE for Mercado Pago
+      // Abre o navegador SÓ SE for Mercado Pago
       if (tipoPagamento === 'online' && linkPagamento) {
         await WebBrowser.openBrowserAsync(linkPagamento);
       }
 
-      alert("Pedido gerado com sucesso! Verifique seu e-mail para ver a nota fiscal.");
-      router.replace('/home-consumidor-screen'); 
+      alert("Pedido gerado com sucesso! Redirecionando para acompanhamento...");
+      
+      // 👉 3. REDIRECIONAR PARA A TELA DE ACOMPANHAMENTO PASSANDO O ID
+      // O nome do arquivo na pasta app/ deve ser exatamente 'acompanharpedido'
+      router.replace({
+        pathname: 'acompanhamento', 
+        params: { idPedido: idPedidoGerado }
+      });
 
     } catch (error) {
       alert("Ocorreu um erro ao processar seu pedido.");

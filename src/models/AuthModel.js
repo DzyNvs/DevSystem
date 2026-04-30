@@ -61,5 +61,38 @@ export const AuthModel = {
     });
 
     return user;
+  },
+
+  // Nova função para Motoboys (Entregadores)
+  registrarMotoboy: async (dados) => {
+    // 1. Verifica se o CPF já existe no banco (na coleção de entregadores)
+    const q = query(collection(db, "entregadores"), where("cpf", "==", dados.cpf));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      throw new Error("CPF_JA_CADASTRADO");
+    }
+
+    // 2. Cria o usuário no Firebase Auth com senha padrão
+    const userCredential = await createUserWithEmailAndPassword(auth, dados.email, 'fitway@2026');
+    const user = userCredential.user;
+
+    // 3. Dispara o e-mail de verificação nativo do Firebase
+    await sendEmailVerification(user);
+
+    // 4. Salva os dados no banco na coleção 'entregadores'
+    await setDoc(doc(db, "entregadores", user.uid), {
+      nome: dados.nome,
+      email: dados.email,
+      cpf: dados.cpf,
+      telefone: dados.telefone,
+      placa_veiculo: dados.placaVeiculo,
+      id_motoboy: dados.id_motoboy,
+      tipo: dados.tipo, // 'motoboy'
+      status_online: false,
+      data_criacao: new Date()
+    });
+
+    return user;
   }
 };

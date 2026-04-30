@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore'; // 👉 Importamos o Firestore completo
+import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore'; 
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native'; // 👉 Para o som na Web
+import { Platform } from 'react-native'; 
 import { auth, db } from '../config/firebase';
 import { useCarrinhoStore } from './useCarrinhoStore';
 
@@ -10,7 +10,7 @@ export const useHeaderConsumidorController = () => {
   const [nomeUsuario, setNomeUsuario] = useState("Carregando...");
   const [menuAberto, setMenuAberto] = useState(false);
   
-  // 👉 Estados da Notificação do Consumidor
+  // Estados da Notificação do Consumidor
   const [temNotificacao, setTemNotificacao] = useState(false);
   const [alerta, setAlerta] = useState({ mostrar: false, titulo: '', mensagem: '' });
 
@@ -34,10 +34,11 @@ export const useHeaderConsumidorController = () => {
             const primeiroNome = nomeCompleto.split(' ')[0];
             setNomeUsuario(primeiroNome);
           } else {
+            console.log("Documento não existe na coleção 'consumidores' ou não tem o campo 'nome'");
             setNomeUsuario("Visitante");
           }
 
-          // 👉 OUVINTE DE STATUS DO PEDIDO PARA O CONSUMIDOR
+          // OUVINTE DE STATUS DO PEDIDO PARA O CONSUMIDOR
           const q = query(
             collection(db, 'pedidos'),
             where('id_consumidor', '==', user.uid)
@@ -48,7 +49,6 @@ export const useHeaderConsumidorController = () => {
           unsubscribePedidos = onSnapshot(q, (snapshot) => {
             if (!initialLoad) {
               snapshot.docChanges().forEach((change) => {
-                // 'modified' significa que o restaurante alterou o status do pedido lá no Firebase!
                 if (change.type === 'modified') {
                   const statusNovo = change.doc.data().status;
                   dispararNotificacaoAtualizacao(statusNovo);
@@ -74,7 +74,7 @@ export const useHeaderConsumidorController = () => {
     };
   }, []);
 
-  // 👉 Função que exibe o aviso bonito na tela dependendo do status
+  // Função que exibe o aviso bonito na tela dependendo do status
   const dispararNotificacaoAtualizacao = (status) => {
     const mensagens = {
       confirmado: { titulo: 'Pedido Aceito!', desc: 'O restaurante confirmou seu pedido e logo começará a prepará-lo.' },
@@ -139,9 +139,9 @@ export const useHeaderConsumidorController = () => {
     menuAberto, 
     setMenuAberto, 
     handleLogout,
-    alerta,             // 👉 Exporta pro Toast
-    fecharAlerta,       // 👉 Exporta pra fechar o Toast
-    temNotificacao,     // 👉 Exporta pra Bolinha Vermelha
-    irParaMeusPedidos   // 👉 Nova função de navegação
+    alerta,             
+    fecharAlerta,       
+    temNotificacao,     
+    irParaMeusPedidos   
   };
 };

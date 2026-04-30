@@ -1,9 +1,11 @@
-// 👉 Adicionamos doc e updateDoc aqui na importação
 import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-
 export const PedidoModel = {
+  // --------------------------------------------------------
+  // FUNÇÕES DO RESTAURANTE E CONSUMIDOR
+  // --------------------------------------------------------
+  
   async buscarPedidosDoRestaurante(idDoRestaurante) {
     try {
       const q = query(
@@ -37,10 +39,12 @@ export const PedidoModel = {
         subtotal: dadosPedido.subtotal,
         taxa_entrega: dadosPedido.taxa_entrega,
         total_final: dadosPedido.total_final,
-        status: 'pendente', 
-        link_pagamento: dadosPedido.link_pagamento || '',
         
-        // Salvando a forma de pagamento que o cliente escolheu
+        status: dadosPedido.status || 'pendente', 
+        codigo_entrega: dadosPedido.codigo_entrega || null,
+        id_motorista: dadosPedido.id_motorista || null,
+        
+        link_pagamento: dadosPedido.link_pagamento || '',
         tipo_pagamento: dadosPedido.tipo_pagamento || 'online',
         forma_pagamento: dadosPedido.forma_pagamento || 'mercado_pago',
         
@@ -82,13 +86,61 @@ export const PedidoModel = {
     }
   },
 
-  // 👉 NOVA FUNÇÃO AQUI: Atualiza o status do pedido direto no banco
   async atualizarStatusPedido(idPedido, novoStatus) {
     try {
       const pedidoRef = doc(db, 'pedidos', idPedido);
       await updateDoc(pedidoRef, { status: novoStatus });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
+      throw error;
+    }
+  },
+
+  // --------------------------------------------------------
+  // NOVAS FUNÇÕES DO MOTOBOY (ENTREGADOR)
+  // --------------------------------------------------------
+
+  // Busca pedidos que o restaurante já despachou e não tem entregador
+  async buscarPedidosDisponiveisParaEntrega() {
+    try {
+      const q = query(
+        collection(db, 'pedidos'),
+        where('status', '==', 'saiu_entrega'),
+        where('id_motorista', '==', null)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Erro ao buscar disponíveis:", error);
+      throw error;
+    }
+  },
+
+  // Busca o histórico de um motoboy específico para calcular os ganhos
+  async buscarHistoricoMotorista(idMotorista) {
+    try {
+      const q = query(
+        collection(db, 'pedidos'),
+        where('id_motorista', '==', idMotorista)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Erro ao buscar histórico do motorista:", error);
+      throw error;
+    }
+  },
+
+  // Vincula o motoboy ao pedido (Quando ele clica em "Aceitar Corrida")
+  async aceitarCorrida(idPedido, idMotorista) {
+    try {
+      const pedidoRef = doc(db, 'pedidos', idPedido);
+      await updateDoc(pedidoRef, { 
+        id_motorista: idMotorista,
+        status_entrega: 'coletando' // Indica que o motoboy está a caminho do restaurante
+      });
+    } catch (error) {
+      console.error("Erro ao aceitar corrida:", error);
       throw error;
     }
   }

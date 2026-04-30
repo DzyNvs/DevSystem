@@ -35,14 +35,28 @@ export const useLoginController = () => {
           telefoneBusca = apenasNumeros.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
         }
 
-        const qTel = query(collection(db, 'consumidores'), where('telefone', '==', telefoneBusca));
-        const snapTel = await getDocs(qTel);
+        // 1. Busca nos Consumidores
+        const qTelCons = query(collection(db, 'consumidores'), where('telefone', '==', telefoneBusca));
+        const snapTelCons = await getDocs(qTelCons);
 
-        if (snapTel.empty) {
+        let docUsuario = null;
+
+        if (!snapTelCons.empty) {
+          docUsuario = snapTelCons.docs[0].data();
+        } else {
+          // 2. Se não achou no consumidor, busca nos Entregadores (Motoboys)
+          const qTelMoto = query(collection(db, 'entregadores'), where('telefone', '==', telefoneBusca));
+          const snapTelMoto = await getDocs(qTelMoto);
+          
+          if (!snapTelMoto.empty) {
+            docUsuario = snapTelMoto.docs[0].data();
+          }
+        }
+
+        if (!docUsuario) {
           throw new Error("TELEFONE_NAO_ENCONTRADO");
         }
 
-        const docUsuario = snapTel.docs[0].data();
         if (!docUsuario.email) {
           throw new Error("EMAIL_NAO_VINCULADO");
         }
@@ -86,39 +100,38 @@ export const useLoginController = () => {
 
     try {
       const resultado = await LoginModel.validarCodigoELogar(emailConfirmado, codigo);
-      
-      if (resultado.tipo === 'restaurante') {
-        const userUid = auth.currentUser?.uid || resultado.uid; 
-        
-        if (userUid) {
-          const docRef = doc(db, 'restaurantes', userUid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const dadosRestaurante = docSnap.data();
-            if (dadosRestaurante.onboardingConcluido || (dadosRestaurante.endereco && dadosRestaurante.endereco.rua)) {
-              router.replace('/home-restaurante-screen');
-            } else {
-              router.replace('/onboarding-restaurante');
-            }
-          } else {
-            router.replace('/onboarding-restaurante');
-          }
+      const userUid = auth.currentUser?.uid || resultado.uid; 
+
+      if (!userUid) throw new Error("Falha ao recuperar ID do usuário.");
+
+      // --- LÓGICA DE REDIRECIONAMENTO POR TIPO DE USUÁRIO ---
+
+      // 1. Verificamos se é Restaurante
+      const restSnap = await getDoc(doc(db, 'restaurantes', userUid));
+      if (restSnap.exists()) {
+        const dadosRestaurante = restSnap.data();
+        if (dadosRestaurante.onboardingConcluido || (dadosRestaurante.endereco && dadosRestaurante.endereco.rua)) {
+          router.replace('/home-restaurante-screen');
         } else {
           router.replace('/onboarding-restaurante');
         }
-
-      } else {
-        // É Consumidor
-        const userUid = auth.currentUser?.uid || resultado.uid;
-        if (userUid) {
-          const docRef = doc(db, 'consumidores', userUid);
-          const docSnap = await getDoc(docRef);
-          const dadosUsuario = docSnap.exists() ? docSnap.data() : {};
-          console.log("Informações do Consumidor Logado:", dadosUsuario);
-        }
-        router.replace('/home-consumidor-screen');
+        return;
       }
+
+      // 2. Verificamos se é Entregador (Motoboy)
+      const motoSnap = await getDoc(doc(db, 'entregadores', userUid));
+      if (motoSnap.exists()) {
+        console.log("Motoboy logado:", motoSnap.data().nome);
+        router.replace('/motoboy/home'); // <-- Rota do motoboy
+        return;
+      }
+
+      // 3. Se não é nenhum dos dois, assume-se que é Consumidor
+      const consSnap = await getDoc(doc(db, 'consumidores', userUid));
+      if (consSnap.exists()) {
+        console.log("Consumidor logado:", consSnap.data().nome);
+      }
+      router.replace('/home-consumidor-screen');
       
     } catch (error) {
       console.log("Erro no login:", error);
