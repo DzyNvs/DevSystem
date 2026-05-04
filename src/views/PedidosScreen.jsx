@@ -2,11 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { API_URL } from '../config/api.js'; // 👉 Adicionei a API para mandar a nota fiscal daqui também
+import { API_URL } from '../config/api.js';
 import { usePedidosController } from '../controllers/usePedidosController';
 import { HeaderRestaurante } from './HeaderRestaurante';
 
-// Linhas com 5 cards
 const { width } = Dimensions.get('window');
 const gap = 16;
 const paddingHorizontal = 20;
@@ -16,10 +15,7 @@ export function PedidosScreen() {
   const ctrl = usePedidosController();
   const router = useRouter();
 
-  // 👉 Estados das abas
   const [abaAtiva, setAbaAtiva] = useState('pendente');
-
-  // 👉 Estados do Modal de Finalização (Três pontinhos)
   const [modalVisivel, setModalVisivel] = useState(false);
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
   const [codigoDigitado, setCodigoDigitado] = useState('');
@@ -52,25 +48,26 @@ export function PedidosScreen() {
     return pedido.status === abaAtiva;
   });
 
-  // 👉 Lógica para abrir o modal
   const abrirModalFinalizar = (pedido) => {
     setPedidoSelecionado(pedido);
     setCodigoDigitado('');
     setModalVisivel(true);
   };
 
-  // 👉 Lógica para validar o código e finalizar
   const confirmarFinalizacao = async () => {
+    // 1. Validação do código com aviso de erro
     if (codigoDigitado.trim() !== pedidoSelecionado.codigo_entrega) {
-      return Alert.alert("Código Inválido", "O código não confere com o do cliente.");
+      return Alert.alert(
+        "Código Inválido", 
+        "O código digitado não confere com o código de segurança do cliente. Solicite o código correto ao entregador/cliente."
+      );
     }
 
     setProcessando(true);
     try {
-      // Muda o status usando o controller que você já tem
+      // 2. Só muda para 'entregue' se o código acima for válido
       await ctrl.alterarStatus(pedidoSelecionado.id, 'entregue');
 
-      // Dispara a nota fiscal por e-mail (igual o motoboy faz)
       try {
         await fetch(`${API_URL}/enviar-nota-fiscal`, {
           method: 'POST',
@@ -89,9 +86,9 @@ export function PedidosScreen() {
       }
 
       setModalVisivel(false);
-      Alert.alert("Sucesso", "Pedido finalizado pelo restaurante!");
+      Alert.alert("Sucesso", "Pedido validado e finalizado com sucesso!");
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível finalizar o pedido.");
+      Alert.alert("Erro", "Ocorreu um erro ao tentar finalizar o pedido no servidor.");
     } finally {
       setProcessando(false);
     }
@@ -104,14 +101,10 @@ export function PedidosScreen() {
       <View style={styles.cardPedido}>
         <View style={styles.cardHeader}>
           <Text style={styles.idPedido}>Pedido #{item.id?.substring(0, 6).toUpperCase()}</Text>
-          
-          {/* 👉 Agrupei o status com os três pontinhos */}
           <View style={styles.headerAcoes}>
             <View style={[styles.badgeStatus, { backgroundColor: statusFormatado.fundo }]}>
               <Text style={[styles.textoStatus, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
             </View>
-            
-            {/* Só mostra os 3 pontinhos se o pedido não estiver finalizado/recusado */}
             {item.status !== 'entregue' && item.status !== 'recusado' && (
               <TouchableOpacity style={styles.btnTresPontos} onPress={() => abrirModalFinalizar(item)}>
                 <Ionicons name="ellipsis-vertical" size={20} color="#555" />
@@ -130,19 +123,15 @@ export function PedidosScreen() {
         <View style={styles.comandaContainer}>
           <Text style={styles.comandaTitulo}>COMANDA DE ITENS</Text>
           <View style={styles.comandaDivisor} />
-          {item.itens && item.itens.length > 0 ? (
-            item.itens.map((produto, index) => (
-              <View key={index} style={styles.comandaItem}>
-                <Text style={styles.comandaItemQtd}>{produto.qtd}x</Text>
-                <Text style={styles.comandaItemNome}>{produto.nome}</Text>
-                <Text style={styles.comandaItemPreco}>
-                  R$ {(produto.preco * produto.qtd).toFixed(2).replace('.', ',')}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.textoDetalhe}>Nenhum item encontrado.</Text>
-          )}
+          {item.itens?.map((produto, index) => (
+            <View key={index} style={styles.comandaItem}>
+              <Text style={styles.comandaItemQtd}>{produto.qtd}x</Text>
+              <Text style={styles.comandaItemNome}>{produto.nome}</Text>
+              <Text style={styles.comandaItemPreco}>
+                R$ {(produto.preco * produto.qtd).toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.cardFooter}>
@@ -150,7 +139,6 @@ export function PedidosScreen() {
           <Text style={styles.textoTotal}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
         </View>
 
-        {/* 👉 BOTÕES DE AÇÃO INFERIORES */}
         <View style={styles.acoesContainer}>
           {item.status === 'pendente' && (
             <>
@@ -158,7 +146,7 @@ export function PedidosScreen() {
                 <Text style={styles.txtBtnBranco}>Recusar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btnAcao, styles.btnPadrao]} onPress={() => ctrl.alterarStatus(item.id, 'confirmado')}>
-                <Text style={styles.txtBtnBranco}>Aceitar Pedido</Text>
+                <Text style={styles.txtBtnBranco}>Aceitar</Text>
               </TouchableOpacity>
             </>
           )}
@@ -171,13 +159,17 @@ export function PedidosScreen() {
 
           {item.status === 'preparando' && (
             <TouchableOpacity style={[styles.btnAcao, styles.btnPadrao]} onPress={() => ctrl.alterarStatus(item.id, 'saiu_entrega')}>
-              <Text style={styles.txtBtnBranco}>Despachar / Saiu Entrega</Text>
+              <Text style={styles.txtBtnBranco}>Despachar</Text>
             </TouchableOpacity>
           )}
 
+          {/* 👉 MODIFICAÇÃO AQUI: Agora ele abre o modal em vez de finalizar direto */}
           {item.status === 'saiu_entrega' && (
-            <TouchableOpacity style={[styles.btnAcao, styles.btnPadrao]} onPress={() => ctrl.alterarStatus(item.id, 'entregue')}>
-              <Text style={styles.txtBtnBranco}>Marcar como Entregue</Text>
+            <TouchableOpacity 
+              style={[styles.btnAcao, styles.btnPadrao]} 
+              onPress={() => abrirModalFinalizar(item)}
+            >
+              <Text style={styles.txtBtnBranco}>Finalizar Pedido</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -188,7 +180,6 @@ export function PedidosScreen() {
   return (
     <View style={styles.mainContainer}>
       <HeaderRestaurante />
-
       <View style={styles.content}>
         <View style={styles.headerTitleContainer}>
           <TouchableOpacity onPress={() => router.back()} style={styles.botaoVoltar}>
@@ -205,9 +196,7 @@ export function PedidosScreen() {
                 style={[styles.abaBtn, abaAtiva === aba.id && styles.abaAtiva]}
                 onPress={() => setAbaAtiva(aba.id)}
               >
-                <Text style={[styles.abaTexto, abaAtiva === aba.id && styles.abaTextoAtivo]}>
-                  {aba.nome}
-                </Text>
+                <Text style={[styles.abaTexto, abaAtiva === aba.id && styles.abaTextoAtivo]}>{aba.nome}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -217,27 +206,24 @@ export function PedidosScreen() {
           <ActivityIndicator size="large" color="#93BD57" style={{ marginTop: 50 }} />
         ) : (
           <FlatList
-            key={'grid-5'}
             data={pedidosFiltrados}
             keyExtractor={(item) => item.id}
             renderItem={renderPedido}
             numColumns={5}
             columnWrapperStyle={styles.columnWrapper}
             contentContainerStyle={styles.lista}
-            showsVerticalScrollIndicator={false}
             ListEmptyComponent={<Text style={styles.textoVazio}>Nenhum pedido nesta aba.</Text>}
           />
         )}
       </View>
 
-      {/* 👉 MODAL DE FINALIZAÇÃO */}
       <Modal visible={modalVisivel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Ionicons name="shield-checkmark" size={40} color="#2E7D32" style={{ marginBottom: 10 }} />
             <Text style={styles.modalTitulo}>Finalizar Pedido</Text>
             <Text style={styles.modalSub}>
-              Insira o código de 4 dígitos informado pelo cliente para concluir a entrega/retirada.
+              Insira o código de 4 dígitos informado pelo cliente para concluir a entrega.
             </Text>
 
             <TextInput
@@ -251,12 +237,13 @@ export function PedidosScreen() {
             />
 
             <View style={styles.modalBotoes}>
+              {/* Opção de voltar/cancelar */}
               <TouchableOpacity 
                 style={styles.btnModalCancel} 
                 onPress={() => setModalVisivel(false)}
                 disabled={processando}
               >
-                <Text style={styles.txtBtnModal}>Cancelar</Text>
+                <Text style={styles.txtBtnModalColor}>Voltar</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -267,14 +254,13 @@ export function PedidosScreen() {
                 {processando ? (
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (
-                  <Text style={styles.txtBtnModal}>Validar</Text>
+                  <Text style={styles.txtBtnModal}>Confirmar</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -282,42 +268,25 @@ export function PedidosScreen() {
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#F9FAFB' },
   content: { flex: 1, paddingTop: 15 },
-  
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 20 },
   botaoVoltar: { marginRight: 15, padding: 4 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  
-  // 👉 Estilos que vieram da branch de Layout
   abasContainer: { borderBottomWidth: 1, borderBottomColor: '#EAEAEA', paddingBottom: 10, paddingHorizontal: 20, marginBottom: 15 },
   abaBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F0F0F0', marginRight: 10, borderWidth: 1, borderColor: 'transparent' },
   abaAtiva: { backgroundColor: '#93BD57', borderColor: '#93BD57' },
   abaTexto: { fontSize: 14, fontWeight: 'bold', color: '#666' },
   abaTextoAtivo: { color: '#FFF' },
-
   lista: { paddingBottom: 40, paddingHorizontal: 20 },
   columnWrapper: { justifyContent: 'flex-start', gap: gap },
-  
-  cardPedido: { 
-    width: cardWidth,
-    backgroundColor: '#FFF', 
-    padding: 12, 
-    borderRadius: 12, 
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
-    marginBottom: 16,
-  },
+  cardPedido: { width: cardWidth, backgroundColor: '#FFF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EAEAEA', marginBottom: 16 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  
-  // 👉 Mistura das duas branchs: Mantém os três pontinhos, mas com os tamanhos do novo layout
   headerAcoes: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   btnTresPontos: { padding: 4 },
   idPedido: { fontSize: 13, fontWeight: 'bold', color: '#111' },
   badgeStatus: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   textoStatus: { fontSize: 9, fontWeight: 'bold' },
-  
   textoDetalhe: { fontSize: 12, color: '#555', marginBottom: 2 },
   textoBold: { fontWeight: 'bold', color: '#333' },
-  
   comandaContainer: { backgroundColor: '#F8F9FA', borderRadius: 8, padding: 8, marginVertical: 10, minHeight: 90 },
   comandaTitulo: { fontSize: 10, fontWeight: 'bold', color: '#777', textAlign: 'center', letterSpacing: 1 },
   comandaDivisor: { height: 1, backgroundColor: '#EAEAEA', marginVertical: 6 },
@@ -325,19 +294,14 @@ const styles = StyleSheet.create({
   comandaItemQtd: { fontSize: 12, fontWeight: 'bold', color: '#333', width: 22 },
   comandaItemNome: { flex: 1, fontSize: 12, color: '#444', paddingRight: 5 },
   comandaItemPreco: { fontSize: 12, fontWeight: '500', color: '#333' },
-  
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EAEAEA' },
   textoTotal: { fontSize: 15, fontWeight: 'bold', color: '#2e7d32' },
   textoVazio: { textAlign: 'center', marginTop: 50, color: '#777', fontSize: 16 },
-
-  // 👉 Estilos dos botões do layout novo
   acoesContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 12, gap: 6 },
   btnAcao: { paddingVertical: 8, paddingHorizontal: 4, borderRadius: 8, flex: 1, alignItems: 'center' },
   btnRecusar: { backgroundColor: '#D32F2F' }, 
   btnPadrao: { backgroundColor: '#93BD57' },
   txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 11 },
-
-  // 👉 Estilos do Modal que vieram da sua branch original
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxWidth: 350, backgroundColor: '#FFF', padding: 24, borderRadius: 16, alignItems: 'center', elevation: 5 },
   modalTitulo: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 8 },
@@ -346,5 +310,6 @@ const styles = StyleSheet.create({
   modalBotoes: { flexDirection: 'row', width: '100%', gap: 12 },
   btnModalCancel: { flex: 1, paddingVertical: 14, backgroundColor: '#E0E0E0', borderRadius: 8, alignItems: 'center' },
   btnModalConfirm: { flex: 1, paddingVertical: 14, backgroundColor: '#2E7D32', borderRadius: 8, alignItems: 'center' },
-  txtBtnModal: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
+  txtBtnModal: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  txtBtnModalColor: { color: '#333', fontSize: 16, fontWeight: 'bold' }
 });
