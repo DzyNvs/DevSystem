@@ -37,9 +37,15 @@ export function HeaderConsumidor() {
           <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           
           <View style={styles.navLinks}>
-            <TouchableOpacity><Text style={[styles.navText, styles.navTextActive]}>Início</Text></TouchableOpacity>
+            {/* Botão Início agora é clicável e redireciona para a Home */}
+            <TouchableOpacity onPress={() => router.push('/home-consumidor-screen')}>
+              <Text style={[styles.navText, styles.navTextActive]}>Início</Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity><Text style={styles.navText}>Restaurantes</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.navText}>Drops</Text></TouchableOpacity>
+            
+            {/* Botão Drops foi removido daqui */}
+            
             <TouchableOpacity><Text style={styles.navText}>Sobre nós</Text></TouchableOpacity>
           </View>
         </View>
@@ -133,16 +139,13 @@ const styles = StyleSheet.create({
   cartValue: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333' },
   cartItems: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
   
-  // 👉 Estilos do Dropdown
   dropdownMenu: { position: 'absolute', top: '100%', right: 0, backgroundColor: '#FFF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 5, zIndex: 999, minWidth: 160 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   dropdownText: { fontFamily: 'Nunito', fontSize: 14, color: '#E53935', marginLeft: 10, fontWeight: '600' },
 
-  // 👉 Estilos das Bolinhas de Notificação
   badgePequena: { position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935', borderWidth: 1, borderColor: '#F2E3BB' },
   badgeDropdown: { position: 'absolute', top: -2, right: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935' },
 
-  // 👉 Estilos do Toast do Consumidor
   toastContainer: { position: 'absolute', top: 90, right: 70, backgroundColor: '#005F02', borderRadius: 8, padding: 16, flexDirection: 'row', alignItems: 'center', zIndex: 9999, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, minWidth: 320 },
   toastContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   toastTextContainer: { marginLeft: 12 },
