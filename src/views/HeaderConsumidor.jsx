@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { usePathname, useRouter } from 'expo-router'; // IMPORTADO usePathname
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHeaderConsumidorController } from '../controllers/useHeaderConsumidorController';
 import { CarrinhoDrawer } from './CarrinhoDrawer';
@@ -10,10 +9,11 @@ const logo = require('../../assets/images/logo.png');
 export function HeaderConsumidor() {
   const ctrl = useHeaderConsumidorController();
   const router = useRouter();
+  const pathname = usePathname(); // PEGA A ROTA ATUAL
 
   return (
     <>
-      {/* 👉 TOAST FLUTUANTE DE ATUALIZAÇÃO DE PEDIDO (LADO DO CLIENTE) */}
+      {/* 👉 TOAST FLUTUANTE DE ATUALIZAÇÃO DE PEDIDO */}
       {ctrl.alerta.mostrar && (
         <View style={styles.toastContainer}>
           <View style={styles.toastContent}>
@@ -37,16 +37,31 @@ export function HeaderConsumidor() {
           <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           
           <View style={styles.navLinks}>
-            <TouchableOpacity><Text style={[styles.navText, styles.navTextActive]}>Início</Text></TouchableOpacity>
+            {/* Início fica verde se estiver na Home */}
+            <TouchableOpacity onPress={() => router.push('/home-consumidor-screen')}>
+              <Text style={[
+                styles.navText, 
+                pathname === '/home-consumidor-screen' && styles.navTextActive
+              ]}>
+                Início
+              </Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity><Text style={styles.navText}>Restaurantes</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.navText}>Drops</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.navText}>Sobre nós</Text></TouchableOpacity>
+            
+            {/* Sobre nós fica verde se o pathname for /sobre-nos */}
+            <TouchableOpacity onPress={() => router.push('/sobre-nos')}>
+              <Text style={[
+                styles.navText, 
+                pathname === '/sobre-nos' && styles.navTextActive
+              ]}>
+                Sobre nós
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.rightSection}>
-          
-          {/* Botão de endereço */}
           <TouchableOpacity style={styles.addressInfo} onPress={() => router.push('/escolher-endereco')}>
             <Ionicons name="location-outline" size={24} color="#93BD57" />
             <View style={{ marginLeft: 8 }}>
@@ -55,11 +70,8 @@ export function HeaderConsumidor() {
             </View>
           </TouchableOpacity>
 
-          {/* Informações do Usuário com Dropdown */}
           <View style={{ position: 'relative', zIndex: 999 }}>
             <TouchableOpacity style={styles.userInfo} onPress={() => ctrl.setMenuAberto(!ctrl.menuAberto)}>
-              
-              {/* Ícone com a bolinha de notificação global */}
               <View style={{ position: 'relative' }}>
                 <Ionicons name="person-outline" size={20} color="#005F02" />
                 {ctrl.temNotificacao && <View style={styles.badgePequena} />}
@@ -74,8 +86,6 @@ export function HeaderConsumidor() {
 
             {ctrl.menuAberto && (
               <View style={styles.dropdownMenu}>
-                
-                {/* Opção Meus Pedidos */}
                 <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.irParaMeusPedidos}>
                   <View style={{ position: 'relative' }}>
                     <Ionicons name="receipt-outline" size={18} color="#005F02" />
@@ -84,17 +94,14 @@ export function HeaderConsumidor() {
                   <Text style={[styles.dropdownText, { color: '#005F02' }]}>Meus Pedidos</Text>
                 </TouchableOpacity>
 
-                {/* Botão de Sair */}
                 <TouchableOpacity style={styles.dropdownItem} onPress={ctrl.handleLogout}>
                   <Ionicons name="log-out-outline" size={18} color="#E53935" />
                   <Text style={styles.dropdownText}>Sair</Text>
                 </TouchableOpacity>
-                
               </View>
             )}
           </View>
           
-          {/* Carrinho */}
           <TouchableOpacity style={styles.cartInfo} onPress={ctrl.irParaCarrinho}>
             <Ionicons name="bag-handle-outline" size={24} color="#005F02" />
             <View style={{ marginLeft: 8 }}>
@@ -109,7 +116,6 @@ export function HeaderConsumidor() {
         </View>
       </View>
 
-      {/* A Gaveta renderizada aqui */}
       <CarrinhoDrawer />
     </>
   );
@@ -121,7 +127,7 @@ const styles = StyleSheet.create({
   logoImg: { width: 110, height: 55 },
   navLinks: { flexDirection: 'row', marginLeft: 45, gap: 45 },
   navText: { fontFamily: 'Nunito', fontSize: 16, color: '#2A2D34', fontWeight: '500' },
-  navTextActive: { color: '#005F02', fontWeight: 'bold' },
+  navTextActive: { color: '#005F02', fontWeight: 'bold' }, // ESTILO VERDE APLICADO AQUI
   rightSection: { flexDirection: 'row', alignItems: 'center', gap: 25 }, 
   addressInfo: { flexDirection: 'row', alignItems: 'center', paddingRight: 20, borderRightWidth: 1, borderColor: '#EFEFEF' },
   addressLabel: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
@@ -132,17 +138,11 @@ const styles = StyleSheet.create({
   cartInfo: { flexDirection: 'row', alignItems: 'center' },
   cartValue: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333' },
   cartItems: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
-  
-  // 👉 Estilos do Dropdown
   dropdownMenu: { position: 'absolute', top: '100%', right: 0, backgroundColor: '#FFF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 5, zIndex: 999, minWidth: 160 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   dropdownText: { fontFamily: 'Nunito', fontSize: 14, color: '#E53935', marginLeft: 10, fontWeight: '600' },
-
-  // 👉 Estilos das Bolinhas de Notificação
   badgePequena: { position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935', borderWidth: 1, borderColor: '#F2E3BB' },
   badgeDropdown: { position: 'absolute', top: -2, right: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935' },
-
-  // 👉 Estilos do Toast do Consumidor
   toastContainer: { position: 'absolute', top: 90, right: 70, backgroundColor: '#005F02', borderRadius: 8, padding: 16, flexDirection: 'row', alignItems: 'center', zIndex: 9999, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, minWidth: 320 },
   toastContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   toastTextContainer: { marginLeft: 12 },
