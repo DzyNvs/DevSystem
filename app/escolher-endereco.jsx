@@ -1,306 +1,306 @@
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { addDoc, collection, doc, GeoPoint } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  ActivityIndicator, Alert, Platform, ScrollView,
+  StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-
 import Mapa from '../components/Mapa';
 import { auth, db } from '../src/config/firebase';
 
 export default function EscolherEnderecoScreen() {
   const router = useRouter();
-  const [localizacao, setLocalizacao] = useState(null);
-  const [enderecoNome, setEnderecoNome] = useState('');
-  const [apelido, setApelido] = useState('');
-  const [cep, setCep] = useState('');
-  const [cidade, setCidade] = useState('São Paulo');
-  const [numero, setNumero] = useState('');
+
+  const [localizacao, setLocalizacao]         = useState(null);
+  const [carregando, setCarregando]           = useState(true);
+  const [salvando, setSalvando]               = useState(false);
+  const [buscandoNoMapa, setBuscandoNoMapa]   = useState(false);
+
+  const [rua, setRua]               = useState('');
+  const [numero, setNumero]         = useState('');
+  const [bairro, setBairro]         = useState('');
+  const [cidade, setCidade]         = useState('');
+  const [cep, setCep]               = useState('');
   const [complemento, setComplemento] = useState('');
-  const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  // Novo: indica que o reverse geocode está rodando após arrastar o pin
-  const [atualizandoEndereco, setAtualizandoEndereco] = useState(false);
+  const [apelido, setApelido]       = useState('');
 
-  useEffect(() => {
-    pegarLocalizacaoAtual();
-  }, []);
+  // Flag: true quando o usuário já começou a digitar manualmente.
+  // Quando true, arrastar o pin NÃO sobrescreve os campos.
+  const usuarioEditouRef = useRef(false);
+  const debounceRef      = useRef(null);
 
-  const handleCepChange = (texto) => {
-    let formatado = texto.replace(/\D/g, '');
-    if (formatado.length > 5) {
-      formatado = formatado.replace(/^(\d{5})(\d)/, '$1-$2');
-    }
-    setCep(formatado.slice(0, 9));
-  };
+  useEffect(() => { pegarLocalizacaoAtual(); }, []);
 
+  // ── GPS inicial → preenche campos via reverse geocode ──────────────────
   const pegarLocalizacaoAtual = async () => {
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        if (Platform.OS === 'web') alert('Permissão de GPS negada.');
-        else Alert.alert('Atenção', 'Precisamos da permissão de GPS para continuar.');
+        Alert.alert('Atenção', 'Precisamos do GPS para continuar.');
         setCarregando(false);
         return;
       }
-
-      let location = await Location.getCurrentPositionAsync({});
-      await atualizarPosicaoNoMapa(location.coords.latitude, location.coords.longitude);
-    } catch (error) {
-      console.log('Erro ao pegar localização:', error);
+      const loc = await Location.getCurrentPositionAsync({});
+      await reverseGeocode(loc.coords.latitude, loc.coords.longitude, true);
+    } catch (e) {
+      console.log('Erro GPS:', e);
+    } finally {
       setCarregando(false);
     }
   };
 
-  /**
-   * Centraliza o mapa e dispara o reverse geocode.
-   * Chamado tanto no carregamento inicial quanto quando
-   * o usuário arrasta/toca o pin (via onLocationChange do <Mapa>).
-   */
-  const atualizarPosicaoNoMapa = async (lat, lng) => {
-    setLocalizacao({
-      latitude: lat,
-      longitude: lng,
-      latitudeDelta: 0.005,
-      longitudeDelta: 0.005,
-    });
+  // ── Reverse geocode: coords → texto dos campos ──────────────────────────
+  // sobrescreverCampos = false quando o usuário já editou manualmente
+  const reverseGeocode = async (lat, lng, sobrescreverCampos = false) => {
+    setLocalizacao({ latitude: lat, longitude: lng, latitudeDelta: 0.005, longitudeDelta: 0.005 });
+
+    if (!sobrescreverCampos) return; // só move o mapa, não mexe nos campos
 
     try {
       if (Platform.OS === 'web') {
-        // Reverse geocode via Nominatim (sem necessidade de chave extra)
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-        const response = await fetch(url, { headers: { 'User-Agent': 'FitWayApp' } });
-        const data = await response.json();
-
+        const res  = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+          { headers: { 'User-Agent': 'FitWayApp' } }
+        );
+        const data = await res.json();
         if (data.address) {
-          const rua = data.address.road || data.address.pedestrian || 'Rua não encontrada';
-          const bairro = data.address.suburb || data.address.neighbourhood || '';
-          setEnderecoNome(`${rua}${bairro ? ' - ' + bairro : ''}`);
-          setCidade(data.address.city || data.address.town || data.address.village || 'São Paulo');
-
-          let cepApi = data.address.postcode || '';
-          let cepLimpo = cepApi.replace(/\D/g, '');
-          if (cepLimpo.length > 5) cepLimpo = cepLimpo.replace(/^(\d{5})(\d)/, '$1-$2');
-          setCep(cepLimpo.slice(0, 9));
-        } else {
-          setEnderecoNome('Rua não encontrada');
+          setRua(data.address.road || data.address.pedestrian || '');
+          setBairro(data.address.suburb || data.address.neighbourhood || '');
+          setCidade(data.address.city || data.address.town || '');
+          const cepRaw = (data.address.postcode || '').replace(/\D/g, '');
+          setCep(cepRaw.length > 5 ? cepRaw.replace(/^(\d{5})(\d)/, '$1-$2').slice(0, 9) : cepRaw);
         }
       } else {
-        // Reverse geocode nativo via expo-location
-        let resposta = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-        if (resposta.length > 0) {
-          let det = resposta[0];
-          setEnderecoNome(`${det.street || 'Rua s/n'} - ${det.district || ''}`);
-          setCidade(det.subregion || det.city || 'São Paulo');
-
-          let cepApi = det.postalCode || '';
-          let cepLimpo = cepApi.replace(/\D/g, '');
-          if (cepLimpo.length > 5) cepLimpo = cepLimpo.replace(/^(\d{5})(\d)/, '$1-$2');
-          setCep(cepLimpo.slice(0, 9));
+        const [det] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+        if (det) {
+          setRua(det.street || '');
+          setBairro(det.district || '');
+          setCidade(det.subregion || det.city || '');
+          const cepRaw = (det.postalCode || '').replace(/\D/g, '');
+          setCep(cepRaw.length > 5 ? cepRaw.replace(/^(\d{5})(\d)/, '$1-$2').slice(0, 9) : cepRaw);
         }
       }
-    } catch (error) {
-      setEnderecoNome('Endereço (nome da rua indisponível)');
-    } finally {
-      setCarregando(false);
-      setAtualizandoEndereco(false);
+    } catch (e) {
+      console.log('Reverse geocode error:', e);
     }
   };
 
-  /**
-   * Callback recebido do <Mapa> quando o usuário move o pin.
-   * Dispara novo reverse geocode e exibe um spinner discreto.
-   */
+  // ── Forward geocode: campos → move o mapa (sem sobrescrever texto) ──────
+  const forwardGeocode = (ruaV, numV, bairroV, cidadeV, cepV) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const temEndereco   = ruaV.length > 3 && cidadeV.length > 2;
+    const cepLimpo      = cepV.replace(/\D/g, '');
+    const temCepCompleto = cepLimpo.length === 8;
+
+    if (!temEndereco && !temCepCompleto) return;
+
+    debounceRef.current = setTimeout(async () => {
+      setBuscandoNoMapa(true);
+      try {
+        let query = '';
+
+        if (temCepCompleto) {
+          // Usa ViaCEP apenas para montar a query de geocoding — NÃO sobrescreve campos
+          const resCep  = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+          const dataCep = await resCep.json();
+          if (!dataCep.erro) {
+            const logradouro = ruaV || dataCep.logradouro || '';
+            const bairroQ    = bairroV || dataCep.bairro || '';
+            const cidadeQ    = cidadeV || dataCep.localidade || '';
+            query = `${logradouro} ${numV}, ${bairroQ}, ${cidadeQ}, Brazil`;
+
+            // Preenche só os campos que estiverem vazios (usa parâmetros, não state)
+            if (!ruaV    && dataCep.logradouro) setRua(dataCep.logradouro);
+            if (!bairroV && dataCep.bairro)     setBairro(dataCep.bairro);
+            if (!cidadeV && dataCep.localidade) setCidade(dataCep.localidade);
+          }
+        }
+
+        if (!query) query = `${ruaV} ${numV}, ${bairroV}, ${cidadeV}, Brazil`;
+
+        const res     = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+          { headers: { 'User-Agent': 'FitWayApp' } }
+        );
+        const results = await res.json();
+        if (results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lng = parseFloat(results[0].lon);
+          // Atualiza SOMENTE as coordenadas — não mexe nos campos
+          setLocalizacao({ latitude: lat, longitude: lng, latitudeDelta: 0.005, longitudeDelta: 0.005 });
+        }
+      } catch (e) {
+        console.log('Forward geocode error:', e);
+      } finally {
+        setBuscandoNoMapa(false);
+      }
+    }, 800);
+  };
+
+  // ── Handlers de cada campo ──────────────────────────────────────────────
+  const onChange = (setter, campo) => (v) => {
+    usuarioEditouRef.current = true; // marca que o usuário está editando
+    setter(v);
+    const vals = { rua, numero, bairro, cidade, cep, [campo]: v };
+    forwardGeocode(vals.rua, vals.numero, vals.bairro, vals.cidade, vals.cep);
+  };
+
+  const handleCepChange = (texto) => {
+    let f = texto.replace(/\D/g, '');
+    if (f.length > 5) f = f.replace(/^(\d{5})(\d)/, '$1-$2');
+    const val = f.slice(0, 9);
+    usuarioEditouRef.current = true;
+    setCep(val);
+    forwardGeocode(rua, numero, bairro, cidade, val);
+  };
+
+  // ── Callback do mapa (arrastar pin) ────────────────────────────────────
+  // Se o usuário editou campos manualmente → só atualiza coordenadas
+  // Se ainda não editou (modo GPS puro) → faz reverse geocode completo
   const handleLocationChange = async (lat, lng) => {
-    setAtualizandoEndereco(true);
-    await atualizarPosicaoNoMapa(lat, lng);
+    if (usuarioEditouRef.current) {
+      // Só move o ponto, não sobrescreve o que o usuário digitou
+      setLocalizacao({ latitude: lat, longitude: lng, latitudeDelta: 0.005, longitudeDelta: 0.005 });
+    } else {
+      setBuscandoNoMapa(true);
+      await reverseGeocode(lat, lng, true);
+      setBuscandoNoMapa(false);
+    }
   };
 
-  const handleConfirmarEndereco = async () => {
-    const usuarioAtual = auth.currentUser;
-    if (!usuarioAtual || !localizacao) return;
+  // Botão "Usar minha localização" — reseta para GPS e sobrescreve campos
+  const usarMinhaLocalizacao = async () => {
+    setBuscandoNoMapa(true);
+    usuarioEditouRef.current = false;
+    await pegarLocalizacaoAtual();
+    setBuscandoNoMapa(false);
+  };
 
-    if (!numero.trim()) {
-      if (Platform.OS === 'web') alert('Por favor, digite o número do endereço.');
-      else Alert.alert('Atenção', 'Por favor, digite o número do endereço.');
-      return;
-    }
+  // ── Salvar no Firestore ─────────────────────────────────────────────────
+  const handleConfirmar = async () => {
+    const user = auth.currentUser;
+    if (!user || !localizacao) return;
+
+    if (!numero.trim()) { Alert.alert('Atenção', 'Digite o número do endereço.'); return; }
+    if (!rua.trim())    { Alert.alert('Atenção', 'Preencha o nome da rua.'); return; }
 
     setSalvando(true);
     try {
-      const partesEndereco = enderecoNome.split(' - ');
-      const ruaExtraida = partesEndereco[0] || enderecoNome;
-      const bairroExtraido = partesEndereco[1] || '';
-
-      const novoEndereco = {
-        apelido: apelido.trim() || 'Casa',
-        bairro: bairroExtraido,
-        cep,
-        cidade,
-        geolocalizacao: new GeoPoint(localizacao.latitude, localizacao.longitude),
-        id_consumidor: doc(db, 'consumidores', usuarioAtual.uid),
+      await addDoc(collection(db, 'enderecos'), {
+        apelido:        apelido.trim() || 'Casa',
+        rua,
         numero,
-        padrão: true,
-        rua: ruaExtraida,
+        bairro,
+        cidade,
+        cep,
         complemento,
-      };
-
-      await addDoc(collection(db, 'enderecos'), novoEndereco);
-
-      if (Platform.OS === 'web') window.alert('Endereço salvo com sucesso!');
+        geolocalizacao: new GeoPoint(localizacao.latitude, localizacao.longitude),
+        id_consumidor:  doc(db, 'consumidores', user.uid),
+        padrao:         true,
+      });
       router.back();
-    } catch (error) {
-      console.log('Erro ao salvar no banco de dados:', error);
-      alert('Erro ao salvar no banco de dados.');
+    } catch (e) {
+      console.log('Erro ao salvar:', e);
+      Alert.alert('Erro', 'Não foi possível salvar o endereço.');
     } finally {
       setSalvando(false);
     }
   };
 
+  if (carregando) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#93BD57" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Buscando sua posição...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {carregando ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#93BD57" />
-          <Text style={{ marginTop: 10 }}>Buscando sua posição...</Text>
+      <Mapa localizacao={localizacao} onLocationChange={handleLocationChange} />
+
+      {/* Card flutuante com os campos */}
+      <ScrollView style={styles.card} contentContainerStyle={{ paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
+        <View style={styles.labelRow}>
+          <Text style={styles.labelGPS}>📍 Local de entrega</Text>
+          {buscandoNoMapa && <ActivityIndicator size="small" color="#93BD57" style={{ marginLeft: 8 }} />}
+          <TouchableOpacity onPress={usarMinhaLocalizacao} style={styles.btnGPS}>
+            <Text style={styles.btnGPSTexto}>Usar GPS</Text>
+          </TouchableOpacity>
         </View>
-      ) : (
-        <>
-          {/* Mapa ocupa a tela toda — passa o callback de posição */}
-          <Mapa localizacao={localizacao} onLocationChange={handleLocationChange} />
 
-          {/* Card flutuante no topo com as informações do endereço */}
-          <View style={styles.caixaInfo}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Local de Entrega (GPS):</Text>
-              {atualizandoEndereco && (
-                <ActivityIndicator size="small" color="#93BD57" style={{ marginLeft: 8 }} />
-              )}
-            </View>
-            <Text style={styles.enderecoText}>{enderecoNome}</Text>
+        <TextInput style={styles.input} placeholder="Rua / Avenida *"
+          value={rua} onChangeText={onChange(setRua, 'rua')} />
 
-            <View style={styles.linhaInputs}>
-              <TextInput
-                style={[styles.input, { flex: 1.5 }]}
-                placeholder="Apelido (ex: Casa)"
-                value={apelido}
-                onChangeText={setApelido}
-              />
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="CEP"
-                keyboardType="numeric"
-                maxLength={9}
-                value={cep}
-                onChangeText={handleCepChange}
-              />
-            </View>
+        <View style={styles.row}>
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Número *"
+            keyboardType="numeric" value={numero} onChangeText={onChange(setNumero, 'numero')} />
+          <TextInput style={[styles.input, { flex: 1.5, marginLeft: 8 }]} placeholder="CEP"
+            keyboardType="numeric" maxLength={9} value={cep} onChangeText={handleCepChange} />
+        </View>
 
-            <View style={styles.linhaInputs}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Número *"
-                keyboardType="numeric"
-                value={numero}
-                onChangeText={setNumero}
-              />
-              <TextInput
-                style={[styles.input, { flex: 2 }]}
-                placeholder="Complemento (Ap, Bloco)"
-                value={complemento}
-                onChangeText={setComplemento}
-              />
-            </View>
+        <View style={styles.row}>
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Bairro"
+            value={bairro} onChangeText={onChange(setBairro, 'bairro')} />
+          <TextInput style={[styles.input, { flex: 1.5, marginLeft: 8 }]} placeholder="Cidade"
+            value={cidade} onChangeText={onChange(setCidade, 'cidade')} />
+        </View>
 
-            <Text style={styles.dica}>
-              Toque no mapa ou arraste o pin para ajustar a posição
-            </Text>
-          </View>
+        <View style={styles.row}>
+          <TextInput style={[styles.input, { flex: 1.5 }]} placeholder="Complemento (Ap, Bloco)"
+            value={complemento} onChangeText={setComplemento} />
+          <TextInput style={[styles.input, { flex: 1, marginLeft: 8 }]} placeholder="Apelido (Casa)"
+            value={apelido} onChangeText={setApelido} />
+        </View>
 
-          {/* Rodapé com botão de confirmar */}
-          <View style={styles.rodape}>
-            <TouchableOpacity
-              style={[styles.botaoConfirmar, salvando && { opacity: 0.7 }]}
-              onPress={handleConfirmarEndereco}
-              disabled={salvando}
-            >
-              {salvando ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.textoBotao}>Confirmar Endereço</Text>
-              )}
-            </TouchableOpacity>
+        <Text style={styles.dica}>Toque no mapa ou arraste o pin para ajustar</Text>
+      </ScrollView>
 
-            <TouchableOpacity onPress={() => router.back()} disabled={salvando}>
-              <Text style={styles.textoBotaoVoltar}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+      {/* Rodapé */}
+      <View style={styles.rodape}>
+        <TouchableOpacity style={[styles.btnConfirmar, salvando && { opacity: 0.7 }]}
+          onPress={handleConfirmar} disabled={salvando}>
+          {salvando
+            ? <ActivityIndicator color="#FFF" />
+            : <Text style={styles.btnTexto}>Confirmar Endereço</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/selecionar-endereco')} disabled={salvando}>
+          <Text style={styles.btnCancelar}>Cancelar</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  caixaInfo: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+  loading:   { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: {
+    position: 'absolute', top: 50, left: 16, right: 16,
+    backgroundColor: '#FFF', borderRadius: 14, padding: 14,
+    maxHeight: 340, elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10,
   },
-  labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  label: { fontSize: 12, color: '#888', fontWeight: 'bold' },
-  enderecoText: { fontSize: 16, color: '#333', marginBottom: 10 },
-  linhaInputs: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  labelRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  labelGPS:    { fontSize: 12, color: '#888', fontWeight: '600', flex: 1 },
+  btnGPS:      { backgroundColor: '#EAF3DE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  btnGPSTexto: { fontSize: 11, color: '#3B6D11', fontWeight: '600' },
+  row:         { flexDirection: 'row', marginBottom: 0 },
   input: {
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    backgroundColor: '#F9F9F9',
+    borderWidth: 1, borderColor: '#DDD', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 8, fontSize: 14,
+    backgroundColor: '#F9F9F9', marginBottom: 8,
   },
-  dica: {
-    fontSize: 11,
-    color: '#93BD57',
-    textAlign: 'center',
-    marginTop: 2,
-  },
+  dica:    { fontSize: 11, color: '#93BD57', textAlign: 'center', marginTop: 2 },
   rodape: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: '#FFF',
-    padding: 20,
-    borderRadius: 15,
-    elevation: 10,
+    position: 'absolute', bottom: 24, left: 16, right: 16,
+    backgroundColor: '#FFF', borderRadius: 14, padding: 16,
+    elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10,
   },
-  botaoConfirmar: {
-    backgroundColor: '#93BD57',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  textoBotao: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  textoBotaoVoltar: { color: '#666', textAlign: 'center', fontWeight: 'bold', padding: 5 },
+  btnConfirmar: { backgroundColor: '#93BD57', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 8 },
+  btnTexto:     { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  btnCancelar:  { color: '#666', textAlign: 'center', fontWeight: '600', padding: 4 },
 });

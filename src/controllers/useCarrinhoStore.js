@@ -7,12 +7,17 @@ export const useCarrinhoStore = create(
     (set, get) => ({
       itens: [],
       restauranteId: null,
-      
-      // Controle da Gaveta (Drawer)
+
+      // ── Endereço ativo (selecionado na tela de endereços) ────────────────
+      enderecoAtivo: null,
+      setEnderecoAtivo: (endereco) => set({ enderecoAtivo: endereco }),
+
+      // ── Gaveta (Drawer) ──────────────────────────────────────────────────
       drawerAberto: false,
-      abrirDrawer: () => set({ drawerAberto: true }),
+      abrirDrawer:  () => set({ drawerAberto: true }),
       fecharDrawer: () => set({ drawerAberto: false }),
 
+      // ── Carrinho ─────────────────────────────────────────────────────────
       adicionarItem: (produto, idRestaurante) => set((state) => {
         if (state.restauranteId && state.restauranteId !== idRestaurante) {
           return { itens: [{ ...produto, qtd: 1 }], restauranteId: idRestaurante };
@@ -25,12 +30,11 @@ export const useCarrinhoStore = create(
             ),
             restauranteId: idRestaurante
           };
-        } else {
-          return {
-            itens: [...state.itens, { ...produto, qtd: 1 }],
-            restauranteId: idRestaurante
-          };
         }
+        return {
+          itens: [...state.itens, { ...produto, qtd: 1 }],
+          restauranteId: idRestaurante
+        };
       }),
 
       removerItem: (produtoId) => set((state) => {
@@ -41,13 +45,12 @@ export const useCarrinhoStore = create(
               item.id === produtoId ? { ...item, qtd: item.qtd - 1 } : item
             )
           };
-        } else {
-          const novosItens = state.itens.filter(item => item.id !== produtoId);
-          return {
-            itens: novosItens,
-            restauranteId: novosItens.length === 0 ? null : state.restauranteId
-          };
         }
+        const novosItens = state.itens.filter(item => item.id !== produtoId);
+        return {
+          itens: novosItens,
+          restauranteId: novosItens.length === 0 ? null : state.restauranteId
+        };
       }),
 
       limparCarrinho: () => set({ itens: [], restauranteId: null }),
@@ -55,15 +58,15 @@ export const useCarrinhoStore = create(
       calcularTotal: () => {
         const { itens } = get();
         return itens.reduce((total, item) => total + (item.preco * item.qtd), 0);
-      }
+      },
     }),
     {
-      name: 'fitway-carrinho-storage', // Nome do local onde os dados serão salvos
-      storage: createJSONStorage(() => AsyncStorage), // Define o AsyncStorage para React Native/Expo
-      // O partialize permite escolher o que salvar. Não precisamos salvar se a gaveta tá aberta
-      partialize: (state) => ({ 
-        itens: state.itens, 
-        restauranteId: state.restauranteId 
+      name: 'fitway-carrinho-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        itens:          state.itens,
+        restauranteId:  state.restauranteId,
+        enderecoAtivo:  state.enderecoAtivo, // persiste o endereço entre sessões
       }),
     }
   )
