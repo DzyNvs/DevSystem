@@ -100,9 +100,15 @@ export function HeaderConsumidor() {
         <View style={styles.leftSection}>
           <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           <View style={styles.navLinks}>
-            <TouchableOpacity><Text style={[styles.navText, styles.navTextActive]}>Início</Text></TouchableOpacity>
+            {/* Botão Início agora é clicável e redireciona para a Home */}
+            <TouchableOpacity onPress={() => router.push('/home-consumidor-screen')}>
+              <Text style={[styles.navText, styles.navTextActive]}>Início</Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity><Text style={styles.navText}>Restaurantes</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.navText}>Drops</Text></TouchableOpacity>
+            
+            {/* Botão Drops foi removido daqui */}
+            
             <TouchableOpacity><Text style={styles.navText}>Sobre nós</Text></TouchableOpacity>
           </View>
         </View>
@@ -153,7 +159,7 @@ export function HeaderConsumidor() {
                             {end.apelido}
                           </Text>
                           <Text style={styles.endDropRua} numberOfLines={1}>
-                            {end.rua}{end.numero ? `, ${end.numero}` : ''}{end.bairro ? ` – ${end.bairro}` : ''}
+                            {end.rua}{end.numero ? `, ${end.numero}` : ''}{end.bairro ? `– ${end.bairro}` : ''}
                           </Text>
                         </View>
                         {ativo && <Ionicons name="checkmark-circle" size={18} color="#93BD57" />}
@@ -273,6 +279,14 @@ const styles = StyleSheet.create({
   userInfo:     { flexDirection: 'row', alignItems: 'center' },
   welcomeText:  { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
   loginText:    { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333', maxWidth: 120 },
+  addressText: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#93BD57', maxWidth: 140 },
+  userInfo: { flexDirection: 'row', alignItems: 'center' },
+  welcomeText: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
+  loginText: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333', maxWidth: 120 },
+  cartInfo: { flexDirection: 'row', alignItems: 'center' },
+  cartValue: { fontFamily: 'Nunito', fontSize: 14, fontWeight: 'bold', color: '#333' },
+  cartItems: { fontFamily: 'Nunito', fontSize: 12, color: '#777' },
+  
   dropdownMenu: { position: 'absolute', top: '100%', right: 0, backgroundColor: '#FFF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 5, zIndex: 999, minWidth: 160 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   dropdownText: { fontFamily: 'Nunito', fontSize: 14, color: '#E53935', marginLeft: 10, fontWeight: '600' },

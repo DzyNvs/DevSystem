@@ -2,35 +2,47 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { auth } from '../config/firebase';
+import { AvaliacaoModel } from '../models/AvaliacaoModel';
 import { PedidoModel } from '../models/PedidoModel';
-import { RestauranteModel } from '../models/RestauranteModel'; 
+import { RestauranteModel } from '../models/RestauranteModel';
 import { useCarrinhoStore } from './useCarrinhoStore';
 
 export const usePagamentoController = () => {
   const itens = useCarrinhoStore((state) => state.itens) || [];
-  const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId); 
+  const idRestauranteAtual = useCarrinhoStore((state) => state.restauranteId);
   const limparCarrinho = useCarrinhoStore((state) => state.limparCarrinho);
-  
+
   const [carregando, setCarregando] = useState(false);
   const [carregandoOpcoes, setCarregandoOpcoes] = useState(true);
-  
-  const [tipoPagamento, setTipoPagamento] = useState('online'); // 'online' ou 'entrega'
+  const [tipoPagamento, setTipoPagamento] = useState('online');
   const [formaPagamentoEntrega, setFormaPagamentoEntrega] = useState(null);
   const [opcoesRestaurante, setOpcoesRestaurante] = useState({});
 
-  const MP_ACCESS_TOKEN = "APP_USR-8693224672518424-032321-beab53776818d54b1f19d0426dcbe234-3287488807"; 
+  // FitCoins
+  const [fitCoins, setFitCoins] = useState(0);
+  const [usarFitCoins, setUsarFitCoins] = useState(false);
+
+  const MP_ACCESS_TOKEN = "APP_USR-8693224672518424-032321-beab53776818d54b1f19d0426dcbe234-3287488807";
 
   const subtotal = itens.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-  const taxaEntrega = 5.00; 
-  const totalFinal = subtotal + taxaEntrega;
+  const taxaEntrega = 5.00;
+
+  const percentualDesconto = AvaliacaoModel.calcularDesconto(fitCoins); // ex: 15
+  const valorDesconto = usarFitCoins && percentualDesconto > 0
+    ? parseFloat(((subtotal * percentualDesconto) / 100).toFixed(2))
+    : 0;
+  const totalFinal = subtotal + taxaEntrega - valorDesconto;
 
   useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      AvaliacaoModel.buscarFitCoins(user.uid).then(setFitCoins);
+    }
+
     if (idRestauranteAtual) {
       RestauranteModel.buscarPorId(idRestauranteAtual)
         .then(dados => {
-          if (dados && dados.pagamentos) {
-            setOpcoesRestaurante(dados.pagamentos);
-          }
+          if (dados?.pagamentos) setOpcoesRestaurante(dados.pagamentos);
         })
         .finally(() => setCarregandoOpcoes(false));
     } else {
@@ -45,117 +57,112 @@ export const usePagamentoController = () => {
         description: item.descricao || 'Produto FitWay',
         quantity: item.qtd,
         currency_id: 'BRL',
-        unit_price: Number(item.preco)
+        unit_price: Number(item.preco),
       }));
 
       if (taxaEntrega > 0) {
-        mpItems.push({
-          title: "Taxa de Entrega",
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: Number(taxaEntrega)
-        });
+        mpItems.push({ title: 'Taxa de Entrega', quantity: 1, currency_id: 'BRL', unit_price: Number(taxaEntrega) });
+      }
+
+      if (valorDesconto > 0) {
+        mpItems.push({ title: `Desconto FitCoins (${percentualDesconto}%)`, quantity: 1, currency_id: 'BRL', unit_price: -Number(valorDesconto) });
       }
 
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           items: mpItems,
-          back_urls: { success: "https://seusite.com/sucesso", failure: "https://seusite.com/falha", pending: "https://seusite.com/pendente" },
-          auto_return: "approved",
-        })
+          back_urls: { success: 'https://seusite.com/sucesso', failure: 'https://seusite.com/falha', pending: 'https://seusite.com/pendente' },
+          auto_return: 'approved',
+        }),
       });
 
       const data = await response.json();
-      return data.sandbox_init_point || data.init_point; 
-
+      return data.sandbox_init_point || data.init_point;
     } catch (error) {
-      console.error("Erro na API do Mercado Pago:", error);
-      throw new Error("Falha ao gerar link de pagamento.");
+      console.error('Erro na API do Mercado Pago:', error);
+      throw new Error('Falha ao gerar link de pagamento.');
     }
   };
 
   const finalizarPedido = async () => {
-    if (itens.length === 0) return alert("Seu carrinho está vazio!");
-    
+    if (itens.length === 0) return alert('Seu carrinho está vazio!');
     if (tipoPagamento === 'entrega' && !formaPagamentoEntrega) {
-      return alert("Por favor, selecione como você vai pagar na entrega!");
+      return alert('Por favor, selecione como você vai pagar na entrega!');
     }
-    
+
     setCarregando(true);
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error("Usuário não logado");
+      if (!user) throw new Error('Usuário não logado');
 
       let linkPagamento = '';
-      
       if (tipoPagamento === 'online') {
         linkPagamento = await gerarPagamentoMercadoPago();
       }
 
-      // 👉 1. GERAR O CÓDIGO DE ENTREGA (4 dígitos aleatórios)
+      // Debita FitCoins se o desconto foi aplicado
+      if (usarFitCoins && valorDesconto > 0) {
+        await AvaliacaoModel.usarDesconto(user.uid);
+      }
+
       const codigoEntrega = Math.floor(1000 + Math.random() * 9000).toString();
 
-      // 👉 2. INCLUINDO OS NOVOS CAMPOS DE STATUS E CÓDIGO
       const dadosPedido = {
         id_restaurante: idRestauranteAtual,
-        id_consumidor: user.uid, 
-        id_motorista: null, // Começa vazio, o motorista assume depois
-        status: 'pendente', // Pipeline: pendente -> preparando -> saiu_entrega -> entregue
-        codigo_entrega: codigoEntrega, // Código que o cliente passa pro motoboy
-        itens: itens,
+        id_consumidor: user.uid,
+        id_motorista: null,
+        status: 'pendente',
+        codigo_entrega: codigoEntrega,
+        itens,
         subtotal,
         taxa_entrega: taxaEntrega,
+        desconto_fitcoins: valorDesconto,
         total_final: totalFinal,
         link_pagamento: linkPagamento,
         tipo_pagamento: tipoPagamento,
         forma_pagamento: tipoPagamento === 'online' ? 'mercado_pago' : formaPagamentoEntrega,
-        criado_em: new Date().toISOString()
+        criado_em: new Date().toISOString(),
       };
 
-      // Salva o Pedido no Firebase e pega o ID gerado
       const idPedidoGerado = await PedidoModel.criarPedido(dadosPedido);
-
-      // Limpa o carrinho após sucesso
       limparCarrinho();
 
-      // Abre o navegador SÓ SE for Mercado Pago
       if (tipoPagamento === 'online' && linkPagamento) {
         await WebBrowser.openBrowserAsync(linkPagamento);
       }
 
-      alert("Pedido gerado com sucesso! Redirecionando para acompanhamento...");
-      
-      // 👉 3. REDIRECIONAR PARA A TELA DE ACOMPANHAMENTO PASSANDO O ID
-      // O nome do arquivo na pasta app/ deve ser exatamente 'acompanharpedido'
-      router.replace({
-        pathname: 'acompanhamento', 
-        params: { idPedido: idPedidoGerado }
-      });
+      alert('Pedido gerado com sucesso! Redirecionando para acompanhamento...');
+      router.replace({ pathname: 'acompanhamento', params: { idPedido: idPedidoGerado } });
 
     } catch (error) {
-      alert("Ocorreu um erro ao processar seu pedido.");
+      alert('Ocorreu um erro ao processar seu pedido.');
       console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  return { 
-    subtotal, 
-    taxaEntrega, 
-    totalFinal, 
-    finalizarPedido, 
+  return {
+    subtotal,
+    taxaEntrega,
+    valorDesconto,
+    totalFinal,
+    finalizarPedido,
     carregando,
     carregandoOpcoes,
     tipoPagamento,
     setTipoPagamento,
     formaPagamentoEntrega,
     setFormaPagamentoEntrega,
-    opcoesRestaurante
+    opcoesRestaurante,
+    fitCoins,
+    percentualDesconto,
+    usarFitCoins,
+    setUsarFitCoins,
   };
 };

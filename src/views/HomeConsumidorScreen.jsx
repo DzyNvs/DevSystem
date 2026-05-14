@@ -27,6 +27,7 @@ export function HomeConsumidorScreen() {
     { id: '4', nome: 'Wraps', img: { uri: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?q=80&w=300' } },
     { id: '5', nome: 'Poke', img: imgPoke },
     { id: '6', nome: 'Vegano', img: imgVegano },
+    { id: '7', nome: 'Bebidas', img: { uri: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?q=80&w=300' } },
   ];
 
   return (
@@ -61,7 +62,7 @@ export function HomeConsumidorScreen() {
           <FlatList
             data={categorias}
             horizontal
-            showsHorizontalScrollIndicator={false}
+            showsHorizontalScrollIndicator={true}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.categoriasList}
             renderItem={({ item }) => (
@@ -160,56 +161,18 @@ const styles = StyleSheet.create({
   categoriaText: { color: '#FFF', fontWeight: 'bold', fontSize: 14, fontFamily: 'Nunito' },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, justifyContent: 'center' },
   
-  // ESTILOS DO RODAPÉ ATUALIZADOS
+  // ESTILOS DO RODAPÉ
   footerContainer: { backgroundColor: '#FFFDE1', paddingHorizontal: 70, paddingBottom: 40, marginTop: 50 },
   footerLine: { width: '100%', height: 1, backgroundColor: '#A0A6B6', marginVertical: 45 },
-  footerColumnsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start' 
-  },
+  footerColumnsRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'flex-start' },
   footerBrandCol: { width: 300 },
-  logo2Img: { 
-    height: 100, 
-    width: 200, 
-    marginBottom: 5, 
-    marginLeft: -15 
-  },
-  footerBrandText: { 
-    fontFamily: 'Nunito', 
-    fontSize: 18, 
-    fontWeight: '500', 
-    lineHeight: 26, 
-    color: '#000' 
-  },
-  footerColumn: { 
-    marginLeft: 100, 
-    marginTop: 40 
-  },
-  footerTitle: { 
-    fontFamily: 'Nunito', 
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#000', 
-    marginBottom: 20 
-  },
-  socialTitle: { 
-    color: '#000', 
-    fontFamily: 'Nunito', 
-    fontSize: 20, 
-    fontWeight: '700', 
-    marginBottom: 20 
-  },
-  footerLinksList: { 
-    gap: 15 
-  },
-  footerLinkItem: { 
-    fontFamily: 'Nunito', 
-    fontSize: 16, 
-    fontWeight: '400', 
-    color: '#000',
-    lineHeight: 24 
-  },
+  logo2Img: { height: 100, width: 200, marginBottom: 5, marginLeft: -15 },
+  footerBrandText: { fontFamily: 'Nunito', fontSize: 18, fontWeight: '500', lineHeight: 26, color: '#000' },
+  footerColumn: { marginLeft: 100, marginTop: 40 },
+  footerTitle: { fontFamily: 'Nunito', fontSize: 20, fontWeight: '700', color: '#000', marginBottom: 20 },
+  socialTitle: { color: '#000', fontFamily: 'Nunito', fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  footerLinksList: { gap: 15 },
+  footerLinkItem: { fontFamily: 'Nunito', fontSize: 16, fontWeight: '400', color: '#000', lineHeight: 24 },
   socialRow: { flexDirection: 'row', gap: 20 },
   socialIconFooter: { width: 30, height: 30 },
   copyrightArea: { marginTop: 60, alignItems: 'center' },
