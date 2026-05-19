@@ -1,8 +1,8 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { LoginModel } from '../models/LoginModel';
-import { ProdutoModel } from '../models/ProdutoModel';
-import { RestauranteModel } from '../models/RestauranteModel';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { LoginModel } from "../models/LoginModel";
+import { ProdutoModel } from "../models/ProdutoModel";
+import { RestauranteModel } from "../models/RestauranteModel";
 
 export const useHomeController = () => {
   const [restaurantesBase, setRestaurantesBase] = useState([]);
@@ -10,7 +10,7 @@ export const useHomeController = () => {
   const [produtosBase, setProdutosBase] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState("");
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -21,22 +21,30 @@ export const useHomeController = () => {
     try {
       let listaRestaurantes = [];
       if (especialidade) {
-        listaRestaurantes = await RestauranteModel.buscarPorEspecialidade(especialidade);
+        listaRestaurantes =
+          await RestauranteModel.buscarPorEspecialidade(especialidade);
       } else {
         listaRestaurantes = await RestauranteModel.buscarTodos();
       }
 
-      const formatados = listaRestaurantes.map(r => ({
-        id: r.id_restaurante || r.id, 
-        nome: r.nome_fantasia || r.razao_social || 'Restaurante Parceiro',
-        foto: r.imagens?.logoUrl || r.foto || 'https://images.unsplash.com/photo-1490818387583-1b5ba45227d8?q=80&w=400', 
+      const formatados = listaRestaurantes.map((r) => ({
+        id: r.id_restaurante || r.id,
+        nome: r.nome_fantasia || r.razao_social || "Restaurante Parceiro",
+        foto:
+          r.imagens?.logoUrl ||
+          r.foto ||
+          "https://images.unsplash.com/photo-1490818387583-1b5ba45227d8?q=80&w=400",
         capa: r.imagens?.capaUrl || null,
         avaliacao: r.avaliacao || 5.0,
-        descricao: r.descricao || r.especialidade || 'O melhor da região para você.',
-        especialidade: r.especialidade || '', 
-        tempoEntrega: r.tempo_entrega || '30-40',
-        taxaEntrega: r.taxa_entrega || 0,
-        pedidoMinimo: r.pedido_minimo || 10,
+        descricao:
+          r.descricao || r.especialidade || "O melhor da região para você.",
+        especialidade: r.especialidade || "",
+        // 👉 Garante a leitura da taxa. Se não existir no banco, assume 0.
+        taxaEntrega:
+          r.taxa_entrega !== undefined && r.taxa_entrega !== null
+            ? Number(r.taxa_entrega)
+            : 0,
+        // 👉 Foram removidos o tempo_entrega e pedido_minimo daqui
       }));
 
       const listaProdutos = await ProdutoModel.buscarTodos();
@@ -53,7 +61,7 @@ export const useHomeController = () => {
   };
 
   const filtrarPorCategoria = (nomeCategoria) => {
-    setBusca(''); 
+    setBusca("");
     if (categoriaSelecionada === nomeCategoria) {
       setCategoriaSelecionada(null);
       carregarDadosIniciais(null);
@@ -65,27 +73,34 @@ export const useHomeController = () => {
 
   const realizarBusca = (texto) => {
     setBusca(texto);
-    
-    if (texto.trim() === '') {
+
+    if (texto.trim() === "") {
       setRestaurantesFiltrados(restaurantesBase);
     } else {
       const textoMinusculo = texto.toLowerCase();
-      
-      const resultados = restaurantesBase.filter(restaurante => {
-        const nomeSeguro = String(restaurante.nome || '').toLowerCase();
-        const especialidadeSegura = String(restaurante.especialidade || '').toLowerCase();
-        const matchRestaurante = nomeSeguro.includes(textoMinusculo) || especialidadeSegura.includes(textoMinusculo);
-        
-        const matchPrato = produtosBase.some(produto => {
+
+      const resultados = restaurantesBase.filter((restaurante) => {
+        const nomeSeguro = String(restaurante.nome || "").toLowerCase();
+        const especialidadeSegura = String(
+          restaurante.especialidade || "",
+        ).toLowerCase();
+        const matchRestaurante =
+          nomeSeguro.includes(textoMinusculo) ||
+          especialidadeSegura.includes(textoMinusculo);
+
+        const matchPrato = produtosBase.some((produto) => {
           if (produto.id_restaurante !== restaurante.id) return false;
-          const nomeProduto = String(produto.nome || '').toLowerCase();
-          const descProduto = String(produto.descricao || '').toLowerCase();
-          return nomeProduto.includes(textoMinusculo) || descProduto.includes(textoMinusculo);
+          const nomeProduto = String(produto.nome || "").toLowerCase();
+          const descProduto = String(produto.descricao || "").toLowerCase();
+          return (
+            nomeProduto.includes(textoMinusculo) ||
+            descProduto.includes(textoMinusculo)
+          );
         });
-        
+
         return matchRestaurante || matchPrato;
       });
-      
+
       setRestaurantesFiltrados(resultados);
     }
   };
@@ -93,24 +108,27 @@ export const useHomeController = () => {
   const handleLogoff = async () => {
     try {
       await LoginModel.sair();
-      router.replace('/'); 
+      router.replace("/");
     } catch (error) {
       alert("Erro ao tentar sair da conta.");
     }
   };
 
   const abrirRestaurante = (idRestaurante) => {
-    router.push({ pathname: '/consumidor/restaurante-detalhes', params: { id: idRestaurante } });
+    router.push({
+      pathname: "/consumidor/restaurante-detalhes",
+      params: { id: idRestaurante },
+    });
   };
 
-  return { 
-    handleLogoff, 
+  return {
+    handleLogoff,
     abrirRestaurante,
-    restaurantesFiltrados, 
+    restaurantesFiltrados,
     carregando,
     categoriaSelecionada,
     filtrarPorCategoria,
     busca,
-    realizarBusca
+    realizarBusca,
   };
 };

@@ -102,18 +102,21 @@ export function RestauranteDetalhesScreen() {
 
               <View style={styles.detailsRow}>
                 <View style={styles.detailCol}>
-                  <Ionicons name="time-outline" size={16} color="#777" />
-                  <Text style={styles.detailText}>
-                    {ctrl.restaurante?.tempoEntrega} min
-                  </Text>
-                </View>
-                <View style={styles.detailCol}>
                   <Ionicons name="cash-outline" size={16} color="#777" />
-                  <Text style={styles.detailText}>
-                    Taxa: R${" "}
-                    {ctrl.restaurante?.taxaEntrega
-                      ?.toFixed(2)
-                      .replace(".", ",")}
+                  {/* 👉 Verificação adicionada: se for 0, mostra Grátis em destaque, senão mostra o valor */}
+                  <Text
+                    style={[
+                      styles.detailText,
+                      ctrl.restaurante?.taxaEntrega === 0 && {
+                        color: "#2E7D32",
+                        fontWeight: "bold",
+                      },
+                    ]}
+                  >
+                    Taxa:{" "}
+                    {ctrl.restaurante?.taxaEntrega === 0
+                      ? "Grátis"
+                      : `R$ ${ctrl.restaurante?.taxaEntrega?.toFixed(2).replace(".", ",")}`}
                   </Text>
                 </View>
               </View>

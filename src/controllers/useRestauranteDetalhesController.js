@@ -41,7 +41,12 @@ export const useRestauranteDetalhesController = () => {
           ...dadosRestaurante,
           avaliacao: dadosRestaurante.avaliacao || 5.0,
           tempoEntrega: dadosRestaurante.tempo_entrega || "30-40",
-          taxaEntrega: dadosRestaurante.taxa_entrega || 5.0,
+          // 👉 Agora verificamos se existe no banco. Se não existir, é 0 (Grátis)
+          taxaEntrega:
+            dadosRestaurante.taxa_entrega !== undefined &&
+            dadosRestaurante.taxa_entrega !== null
+              ? Number(dadosRestaurante.taxa_entrega)
+              : 0,
           banner:
             dadosRestaurante.imagens?.capaUrl ||
             dadosRestaurante.banner ||
