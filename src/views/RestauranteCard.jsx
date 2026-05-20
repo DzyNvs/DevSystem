@@ -10,6 +10,13 @@ export function RestauranteCard({ restaurante, onPress }) {
       ? "Entrega Grátis"
       : `Taxa R$ ${valorTaxa.toFixed(2).replace(".", ",")}`;
 
+  // 👉 NOVO: Verifica o valor do pedido mínimo para exibir formatado
+  const valorPedidoMinimo = Number(restaurante.pedidoMinimo);
+  const textoPedidoMinimo =
+    valorPedidoMinimo === 0
+      ? "Sem mínimo"
+      : `Min. R$ ${valorPedidoMinimo.toFixed(2).replace(".", ",")}`;
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.imageContainer}>
@@ -21,7 +28,6 @@ export function RestauranteCard({ restaurante, onPress }) {
           </Text>
         </View>
       </View>
-
       <View style={styles.infoContainer}>
         <Text style={styles.nome} numberOfLines={1}>
           {restaurante.nome}
@@ -30,17 +36,30 @@ export function RestauranteCard({ restaurante, onPress }) {
           {restaurante.descricao}
         </Text>
 
-        {/* 👉 Deixamos apenas a Taxa de Entrega no rodapé do card */}
+        {/* 👉 Taxa de Entrega e Pedido Mínimo no rodapé do card */}
         <View style={styles.footerRow}>
-          <Ionicons
-            name="bicycle-outline"
-            size={14}
-            color="#777"
-            style={{ marginRight: 4 }}
-          />
-          <Text style={styles.detalhes}>{textoTaxa}</Text>
+          <View style={styles.footerItem}>
+            <Ionicons
+              name="bicycle-outline"
+              size={14}
+              color="#777"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.detalhes}>{textoTaxa}</Text>
+          </View>
+
+          <View style={styles.footerItem}>
+            <Ionicons
+              name="wallet-outline"
+              size={14}
+              color="#777"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.detalhes}>{textoPedidoMinimo}</Text>
+          </View>
         </View>
-      </View>
+      </View>{" "}
+      {/* 👉 AQUI ESTAVA FALTANDO ESSE FECHAMENTO! */}
     </TouchableOpacity>
   );
 }
@@ -83,6 +102,20 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     height: 32,
   },
-  footerRow: { flexDirection: "row", alignItems: "center", marginTop: 4 }, // Ajustado
-  detalhes: { fontSize: 13, color: "#777", fontWeight: "500" }, // Ajustado
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  footerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  detalhes: {
+    fontSize: 12,
+    color: "#777",
+    fontWeight: "500",
+  },
 });

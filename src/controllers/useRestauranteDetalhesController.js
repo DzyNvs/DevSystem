@@ -47,6 +47,12 @@ export const useRestauranteDetalhesController = () => {
             dadosRestaurante.taxa_entrega !== null
               ? Number(dadosRestaurante.taxa_entrega)
               : 0,
+          // 👉 NOVO: Garante a leitura do pedido mínimo vindo da API/Banco
+          pedidoMinimo:
+            dadosRestaurante.pedido_minimo !== undefined &&
+            dadosRestaurante.pedido_minimo !== null
+              ? Number(dadosRestaurante.pedido_minimo)
+              : 0,
           banner:
             dadosRestaurante.imagens?.capaUrl ||
             dadosRestaurante.banner ||

@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react"; // 👉 Removi o useEffect que não será mais usado aqui
 import { LoginModel } from "../models/LoginModel";
 import { ProdutoModel } from "../models/ProdutoModel";
 import { RestauranteModel } from "../models/RestauranteModel";
@@ -12,9 +12,13 @@ export const useHomeController = () => {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
   const [busca, setBusca] = useState("");
 
-  useEffect(() => {
-    carregarDadosIniciais();
-  }, []);
+  // 👉 Aqui usamos o useFocusEffect corretamente!
+  // Ele vai rodar sempre que o usuário entrar na tela ou mudar de categoria
+  useFocusEffect(
+    useCallback(() => {
+      carregarDadosIniciais(categoriaSelecionada);
+    }, [categoriaSelecionada]),
+  );
 
   const carregarDadosIniciais = async (especialidade = null) => {
     setCarregando(true);
@@ -39,12 +43,14 @@ export const useHomeController = () => {
         descricao:
           r.descricao || r.especialidade || "O melhor da região para você.",
         especialidade: r.especialidade || "",
-        // 👉 Garante a leitura da taxa. Se não existir no banco, assume 0.
         taxaEntrega:
           r.taxa_entrega !== undefined && r.taxa_entrega !== null
             ? Number(r.taxa_entrega)
             : 0,
-        // 👉 Foram removidos o tempo_entrega e pedido_minimo daqui
+        pedidoMinimo:
+          r.pedido_minimo !== undefined && r.pedido_minimo !== null
+            ? Number(r.pedido_minimo)
+            : 0,
       }));
 
       const listaProdutos = await ProdutoModel.buscarTodos();
@@ -64,10 +70,8 @@ export const useHomeController = () => {
     setBusca("");
     if (categoriaSelecionada === nomeCategoria) {
       setCategoriaSelecionada(null);
-      carregarDadosIniciais(null);
     } else {
       setCategoriaSelecionada(nomeCategoria);
-      carregarDadosIniciais(nomeCategoria);
     }
   };
 

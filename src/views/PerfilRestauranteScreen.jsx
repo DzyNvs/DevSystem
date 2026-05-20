@@ -213,6 +213,18 @@ export function PerfilRestauranteScreen() {
           <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
             Deixe 0 para oferecer Frete Grátis.
           </Text>
+          {/* 👉 NOVO CAMPO: Pedido Mínimo */}
+          <Text style={styles.label}>Valor Mínimo do Pedido (R$)</Text>
+          <TextInput
+            style={styles.input}
+            value={ctrl.pedidoMinimo}
+            onChangeText={ctrl.setPedidoMinimo}
+            placeholder="Ex: 15,00 (0 para sem limite)"
+            keyboardType="numeric"
+          />
+          <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+            Deixe 0 se não houver exigência de valor mínimo.
+          </Text>
         </View>
 
         {/* CARD 3: ENDEREÇO */}

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -11,8 +11,8 @@ import {
   View,
 } from "react-native";
 
-// ⚠️ Ajuste o caminho se o seu useCarrinhoStore estiver em outra pasta
 import { useCarrinhoStore } from "../controllers/useCarrinhoStore";
+import { RestauranteModel } from "../models/RestauranteModel"; // ⚠️ Verifique se o caminho do model está correto
 
 export function CarrinhoDrawer() {
   const router = useRouter();
@@ -27,17 +27,37 @@ export function CarrinhoDrawer() {
     limparCarrinho,
   } = useCarrinhoStore();
 
+  // 👉 NOVO: Estado para armazenar o valor do pedido mínimo
+  const [pedidoMinimo, setPedidoMinimo] = useState(0);
+
+  // 👉 NOVO: Busca o pedido mínimo no banco toda vez que abrir a gaveta com um restaurante vinculado
+  useEffect(() => {
+    if (drawerAberto && restauranteId) {
+      RestauranteModel.buscarPorId(restauranteId)
+        .then((res) => {
+          setPedidoMinimo(Number(res?.pedido_minimo || 0));
+        })
+        .catch((err) => {
+          console.error("Erro ao buscar pedido mínimo na gaveta", err);
+        });
+    }
+  }, [drawerAberto, restauranteId]);
+
   // O React recalcula isso automaticamente sempre que a quantidade de itens muda
   const valorTotal = itens.reduce(
     (acc, item) => acc + item.preco * item.qtd,
     0,
   );
 
-  // 👉 NOVO: Cálculo de Calorias
+  // Cálculo de Calorias
   const totalCalorias = itens.reduce(
     (acc, item) => acc + (Number(item.calorias) || 0) * item.qtd,
     0,
   );
+
+  // 👉 NOVO: Lógica para bloquear o botão se estiver abaixo do mínimo
+  const isAbaixoMinimo = valorTotal > 0 && valorTotal < pedidoMinimo;
+  const faltaParaMinimo = pedidoMinimo - valorTotal;
 
   const irParaPagamento = () => {
     fecharDrawer();
@@ -134,7 +154,7 @@ export function CarrinhoDrawer() {
           </ScrollView>
 
           <View style={styles.footer}>
-            {/* 👉 NOVO: Mostra as calorias no rodapé se for maior que zero */}
+            {/* Mostra as calorias no rodapé se for maior que zero */}
             {totalCalorias > 0 && (
               <View style={styles.caloriasRow}>
                 <View style={styles.caloriasLabelContainer}>
@@ -152,13 +172,26 @@ export function CarrinhoDrawer() {
               </Text>
             </View>
 
+            {/* 👉 NOVO: Aviso visual de falta de valor para o pedido mínimo */}
+            {isAbaixoMinimo && (
+              <View style={styles.avisoMinimoContainer}>
+                <Ionicons name="alert-circle" size={16} color="#D32F2F" />
+                <Text style={styles.avisoMinimoTexto}>
+                  Faltam R$ {faltaParaMinimo.toFixed(2).replace(".", ",")} para
+                  o pedido mínimo.
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
-                itens.length === 0 && styles.btnFinalizarInativo,
+                /* O botão fica inativo se estiver vazio OU abaixo do mínimo */
+                (itens.length === 0 || isAbaixoMinimo) &&
+                  styles.btnFinalizarInativo,
               ]}
               onPress={irParaPagamento}
-              disabled={itens.length === 0}
+              disabled={itens.length === 0 || isAbaixoMinimo}
             >
               <Text style={styles.btnFinalizarText}>Ir para Pagamento</Text>
             </TouchableOpacity>
@@ -279,7 +312,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
   },
 
-  // 👉 NOVO: Estilos da parte de Calorias
   caloriasRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -324,5 +356,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFF",
+  },
+
+  // 👉 NOVOS ESTILOS DO AVISO:
+  avisoMinimoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  avisoMinimoTexto: {
+    fontFamily: "Nunito",
+    color: "#D32F2F",
+    fontWeight: "bold",
+    fontSize: 13,
+    flex: 1,
   },
 });

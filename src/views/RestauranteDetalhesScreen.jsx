@@ -119,6 +119,16 @@ export function RestauranteDetalhesScreen() {
                       : `R$ ${ctrl.restaurante?.taxaEntrega?.toFixed(2).replace(".", ",")}`}
                   </Text>
                 </View>
+                {/* 👉 NOVO: Coluna do Pedido Mínimo */}
+                <View style={styles.detailCol}>
+                  <Ionicons name="wallet-outline" size={16} color="#777" />
+                  <Text style={styles.detailText}>
+                    Mínimo:{" "}
+                    {ctrl.restaurante?.pedidoMinimo === 0
+                      ? "Sem mínimo"
+                      : `R$ ${ctrl.restaurante?.pedidoMinimo?.toFixed(2).replace(".", ",")}`}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>

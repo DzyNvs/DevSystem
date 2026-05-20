@@ -13,6 +13,9 @@ import { useCarrinhoController } from "../controllers/useCarrinhoController";
 
 export function CarrinhoScreen() {
   const ctrl = useCarrinhoController();
+  const valorMinimo = ctrl.restaurante?.pedidoMinimo || 0;
+  const isAbaixoMinimo = ctrl.subtotal > 0 && ctrl.subtotal < valorMinimo;
+  const faltaParaMinimo = valorMinimo - ctrl.subtotal;
 
   return (
     <View style={styles.mainContainer}>
@@ -147,9 +150,26 @@ export function CarrinhoScreen() {
 
           {/* Botão Fixo de Continuar */}
           <View style={styles.footer}>
+            {/* 👉 NOVO: Alerta de Pedido Mínimo */}
+            {isAbaixoMinimo && (
+              <View style={styles.avisoMinimoContainer}>
+                <Ionicons name="alert-circle" size={20} color="#D32F2F" />
+                <Text style={styles.avisoMinimoTexto}>
+                  Pedido mínimo é de R${" "}
+                  {valorMinimo.toFixed(2).replace(".", ",")}. Faltam R${" "}
+                  {faltaParaMinimo.toFixed(2).replace(".", ",")}
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity
-              style={styles.btnContinuar}
+              // 👉 NOVO: Adicionamos o estilo inativo e a propriedade disabled
+              style={[
+                styles.btnContinuar,
+                isAbaixoMinimo && styles.btnContinuarInativo,
+              ]}
               onPress={ctrl.irParaPagamento}
+              disabled={isAbaixoMinimo}
             >
               <Text style={styles.btnContinuarText}>
                 Escolher forma de pagamento
@@ -300,4 +320,23 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   btnContinuarText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
+  // 👉 NOVOS ESTILOS:
+  btnContinuarInativo: {
+    backgroundColor: "#CCC",
+  },
+  avisoMinimoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  avisoMinimoTexto: {
+    color: "#D32F2F",
+    fontWeight: "bold",
+    fontSize: 14,
+    flex: 1,
+  },
 });

@@ -20,6 +20,8 @@ export const usePerfilRestauranteController = () => {
 
   // 👉 NOVO ESTADO: Taxa de entrega
   const [taxaEntrega, setTaxaEntrega] = useState("0");
+  // 👉 NOVO ESTADO: Valor mínimo do pedido
+  const [pedidoMinimo, setPedidoMinimo] = useState("0");
 
   const [endereco, setEndereco] = useState({
     cep: "",
@@ -88,6 +90,9 @@ export const usePerfilRestauranteController = () => {
           // 👉 CARREGANDO A TAXA DO BANCO (Substitui ponto por vírgula para a View)
           if (d.taxa_entrega !== undefined)
             setTaxaEntrega(d.taxa_entrega.toString().replace(".", ","));
+          // 👉 CARREGANDO O PEDIDO MÍNIMO DO BANCO
+          if (d.pedido_minimo !== undefined)
+            setPedidoMinimo(d.pedido_minimo.toString().replace(".", ","));
 
           if (d.endereco) setEndereco((prev) => ({ ...prev, ...d.endereco }));
           if (d.coordenadas) setCoordenadas(d.coordenadas);
@@ -252,12 +257,17 @@ export const usePerfilRestauranteController = () => {
 
       // 👉 GARANTINDO QUE A TAXA VÁ COMO NÚMERO DECIMAL PARA O BANCO (Substituindo ',' por '.')
       const taxaFormatada = parseFloat(taxaEntrega.replace(",", ".") || 0);
+      // 👉 FORMATANDO O PEDIDO MÍNIMO PARA O BANCO
+      const pedidoMinimoFormatado = parseFloat(
+        pedidoMinimo.replace(",", ".") || 0,
+      );
 
       const dadosAtualizados = {
         imagens: { logoUrl: urlLogo, capaUrl: urlCapa || null },
         nome_fantasia: nomeFantasia,
         especialidade,
         taxa_entrega: taxaFormatada, // 👉 ADICIONADO AQUI NO PAYLOAD DO BANCO
+        pedido_minimo: pedidoMinimoFormatado, // 👉 SALVANDO O PEDIDO MÍNIMO
         endereco,
         coordenadas,
         pagamentos,
@@ -298,6 +308,8 @@ export const usePerfilRestauranteController = () => {
     setEspecialidade,
     taxaEntrega,
     setTaxaEntrega, // 👉 EXPORTANDO PARA A VIEW
+    pedidoMinimo,
+    setPedidoMinimo, // 👉 EXPORTANDO O PEDIDO MÍNIMO
     endereco,
     coordenadas,
     pagamentos,
