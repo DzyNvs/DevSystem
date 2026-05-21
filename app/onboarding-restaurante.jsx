@@ -34,8 +34,9 @@ export default function OnboardingRestauranteScreen() {
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [especialidade, setEspecialidade] = useState("");
 
-  // 👉 NOVO ESTADO: Taxa de Entrega
   const [taxaEntrega, setTaxaEntrega] = useState("0");
+  // 👉 NOVO ESTADO: Pedido Mínimo
+  const [pedidoMinimo, setPedidoMinimo] = useState("0");
 
   const [endereco, setEndereco] = useState({
     cep: "",
@@ -94,9 +95,14 @@ export default function OnboardingRestauranteScreen() {
             if (dadosDb.nome_fantasia || dadosDb.nomeFantasia) {
               setNomeFantasia(dadosDb.nome_fantasia || dadosDb.nomeFantasia);
             }
-            // 👉 SE JÁ TIVER SALVO ALGO ANTES, TRAZ A TAXA FORMATADA
             if (dadosDb.taxa_entrega !== undefined) {
               setTaxaEntrega(dadosDb.taxa_entrega.toString().replace(".", ","));
+            }
+            // 👉 SE JÁ TIVER SALVO ALGO ANTES, TRAZ O PEDIDO MÍNIMO FORMATADO
+            if (dadosDb.pedido_minimo !== undefined) {
+              setPedidoMinimo(
+                dadosDb.pedido_minimo.toString().replace(".", ","),
+              );
             }
           }
         } catch (error) {
@@ -345,8 +351,11 @@ export default function OnboardingRestauranteScreen() {
         urlCapa = await uploadParaCloudinary(capa);
       }
 
-      // 👉 FORMATANDO A TAXA PARA DECIMAL ANTES DE SALVAR
       const taxaFormatada = parseFloat(taxaEntrega.replace(",", ".") || 0);
+      // 👉 FORMATANDO O PEDIDO MÍNIMO PARA DECIMAL ANTES DE SALVAR
+      const pedidoMinimoFormatado = parseFloat(
+        pedidoMinimo.replace(",", ".") || 0,
+      );
 
       const dadosRestaurante = {
         imagens: {
@@ -355,7 +364,8 @@ export default function OnboardingRestauranteScreen() {
         },
         nome_fantasia: nomeFantasia,
         especialidade,
-        taxa_entrega: taxaFormatada, // 👉 ADICIONANDO NO PAYLOAD DO BANCO
+        taxa_entrega: taxaFormatada,
+        pedido_minimo: pedidoMinimoFormatado, // 👉 ADICIONANDO NO PAYLOAD DO BANCO
         endereco,
         coordenadas,
         pagamentos,
@@ -387,7 +397,7 @@ export default function OnboardingRestauranteScreen() {
     }
   };
 
-  const nomesDias = [
+  const namesDays = [
     "segunda",
     "terca",
     "quarta",
@@ -475,7 +485,7 @@ export default function OnboardingRestauranteScreen() {
               setErros((prev) => ({ ...prev, nomeFantasia: null }));
             }}
             placeholder="Nome da sua loja"
-            placeholderTextColor="#999" // 👉 Adicionado
+            placeholderTextColor="#999"
           />
           {erros.nomeFantasia && (
             <Text style={styles.textoErro}>{erros.nomeFantasia}</Text>
@@ -520,18 +530,33 @@ export default function OnboardingRestauranteScreen() {
             <Text style={styles.textoErro}>{erros.especialidade}</Text>
           )}
 
-          {/* 👉 NOVO CAMPO: Taxa de Entrega na Interface */}
           <Text style={styles.label}>Taxa de Entrega (R$)</Text>
           <TextInput
             style={styles.input}
             value={taxaEntrega}
             onChangeText={setTaxaEntrega}
             placeholder="Ex: 5,00 (0 para grátis)"
-            placeholderTextColor="#999" // 👉 Adicionado
+            placeholderTextColor="#999"
             keyboardType="numeric"
           />
           <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
             Deixe 0 para oferecer Frete Grátis.
+          </Text>
+
+          {/* 👉 NOVO CAMPO: Pedido Mínimo na Interface */}
+          <Text style={[styles.label, { marginTop: 20 }]}>
+            Pedido Mínimo (R$)
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={pedidoMinimo}
+            onChangeText={setPedidoMinimo}
+            placeholder="Ex: 20,00 (0 para sem mínimo)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+          />
+          <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+            Deixe 0 se não houver valor mínimo para pedidos.
           </Text>
         </View>
 
@@ -553,7 +578,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.cep}
             onChangeText={(texto) => handleEnderecoChange("cep", texto)}
             placeholder="00000-000"
-            placeholderTextColor="#999" // 👉 Adicionado
+            placeholderTextColor="#999"
             keyboardType="numeric"
             maxLength={9}
           />
@@ -565,7 +590,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.rua}
             onChangeText={(texto) => handleEnderecoChange("rua", texto)}
             placeholder="Ex: Av. Paulista"
-            placeholderTextColor="#999" // 👉 Adicionado
+            placeholderTextColor="#999"
           />
 
           <View style={styles.linhaDupla}>
@@ -576,7 +601,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.numero}
                 onChangeText={(texto) => handleEnderecoChange("numero", texto)}
                 placeholder="Ex: 1000"
-                placeholderTextColor="#999" // 👉 Adicionado
+                placeholderTextColor="#999"
                 keyboardType="numeric"
               />
             </View>
@@ -589,7 +614,7 @@ export default function OnboardingRestauranteScreen() {
                   handleEnderecoChange("complemento", texto)
                 }
                 placeholder="Loja 2"
-                placeholderTextColor="#999" // 👉 Adicionado
+                placeholderTextColor="#999"
               />
             </View>
           </View>
@@ -600,7 +625,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.bairro}
             onChangeText={(texto) => handleEnderecoChange("bairro", texto)}
             placeholder="Bairro"
-            placeholderTextColor="#999" // 👉 Adicionado
+            placeholderTextColor="#999"
           />
 
           <View style={styles.linhaDupla}>
@@ -611,7 +636,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.cidade}
                 onChangeText={(texto) => handleEnderecoChange("cidade", texto)}
                 placeholder="Cidade"
-                placeholderTextColor="#999" // 👉 Adicionado
+                placeholderTextColor="#999"
               />
             </View>
             <View style={[styles.metade, { flex: 1 }]}>
@@ -621,7 +646,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.estado}
                 onChangeText={(texto) => handleEnderecoChange("estado", texto)}
                 placeholder="SP"
-                placeholderTextColor="#999" // 👉 Adicionado
+                placeholderTextColor="#999"
                 maxLength={2}
                 autoCapitalize="characters"
               />
@@ -655,7 +680,7 @@ export default function OnboardingRestauranteScreen() {
         {/* --- CARD 5: HORÁRIOS --- */}
         <View style={styles.card}>
           <Text style={styles.cardTitulo}>5. Dias e Horários *</Text>
-          {nomesDias.map((dia) => (
+          {namesDays.map((dia) => (
             <View key={dia} style={styles.itemDia}>
               <View style={styles.linhaDiaTopo}>
                 <Text style={styles.nomeDiaTexto}>
@@ -678,8 +703,8 @@ export default function OnboardingRestauranteScreen() {
                       onChangeText={(texto) =>
                         handleHoraChange(dia, "abertura", texto)
                       }
-                      placeholder="00:00" // 👉 Adicionado
-                      placeholderTextColor="#999" // 👉 Adicionado
+                      placeholder="00:00"
+                      placeholderTextColor="#999"
                       keyboardType="numeric"
                       maxLength={5}
                     />
@@ -692,8 +717,8 @@ export default function OnboardingRestauranteScreen() {
                       onChangeText={(texto) =>
                         handleHoraChange(dia, "fechamento", texto)
                       }
-                      placeholder="00:00" // 👉 Adicionado
-                      placeholderTextColor="#999" // 👉 Adicionado
+                      placeholder="00:00"
+                      placeholderTextColor="#999"
                       keyboardType="numeric"
                       maxLength={5}
                     />
@@ -725,9 +750,7 @@ export default function OnboardingRestauranteScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F4F6F8" },
-
   scrollContainer: { paddingHorizontal: 70, paddingTop: 20, paddingBottom: 50 },
-
   header: { marginBottom: 20 },
   titulo: {
     fontSize: 28,
@@ -813,7 +836,6 @@ const styles = StyleSheet.create({
   },
   linhaDupla: { flexDirection: "row", justifyContent: "space-between" },
   metade: { flex: 1, marginRight: 5 },
-
   chipScroll: {
     flexDirection: "row",
     marginTop: 10,
@@ -832,7 +854,6 @@ const styles = StyleSheet.create({
   chipErro: { borderColor: "#E53E3E" },
   chipTexto: { color: "#666", fontWeight: "600" },
   chipTextoSelecionado: { color: "#FFF" },
-
   gridPagamentos: {
     flexDirection: "row",
     flexWrap: "wrap",
