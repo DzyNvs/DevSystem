@@ -15,6 +15,9 @@ export const useRestauranteDetalhesController = () => {
   const [pratoSelecionado, setPratoSelecionado] = useState(null);
   const [modalVisivel, setModalVisivel] = useState(false);
 
+  // 👉 NOVO: Estado para controlar a exibição do aviso de "Item Adicionado" (Toast)
+  const [toastVisivel, setToastVisivel] = useState(false);
+
   // 👉 NOVOS STATES: Guardam os valores digitados no filtro de calorias
   const [minCal, setMinCal] = useState("");
   const [maxCal, setMaxCal] = useState("");
@@ -83,9 +86,16 @@ export const useRestauranteDetalhesController = () => {
     setModalVisivel(false);
   };
 
-  const handleAdicionarItem = (prato) => {
-    adicionarItemAoCarrinho(prato, idRestaurante);
+  const handleAdicionarItem = (prato, quantidade = 1) => {
+    // 👉 Passa a quantidade como terceiro parâmetro para a store
+    adicionarItemAoCarrinho(prato, idRestaurante, quantidade);
     fecharPratoModal();
+
+    // 👉 NOVO: Ativa o Toast e programa para ele sumir em 3 segundos
+    setToastVisivel(true);
+    setTimeout(() => {
+      setToastVisivel(false);
+    }, 3000);
   };
 
   return {
@@ -104,5 +114,8 @@ export const useRestauranteDetalhesController = () => {
     setMinCal,
     maxCal,
     setMaxCal,
+
+    // 👉 NOVO: Exportando o estado do Toast para a View
+    toastVisivel,
   };
 };

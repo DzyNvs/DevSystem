@@ -204,8 +204,19 @@ export function RestauranteDetalhesScreen() {
         visible={ctrl.modalVisivel}
         onClose={ctrl.fecharPratoModal}
         prato={ctrl.pratoSelecionado}
-        onAddToCart={ctrl.handleAdicionarItem}
+        // 👉 Agora recebemos o prato e a quantidade
+        onAddToCart={(prato, quantidade) =>
+          ctrl.handleAdicionarItem(prato, quantidade)
+        }
       />
+
+      {/* 👉 NOVO: O nosso aviso (Toast) flutuante bonitinho */}
+      {ctrl.toastVisivel && (
+        <View style={styles.toastContainer}>
+          <Ionicons name="checkmark-circle" size={22} color="#FFF" />
+          <Text style={styles.toastText}>Item adicionado ao carrinho!</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -373,5 +384,30 @@ const styles = StyleSheet.create({
     color: "#777",
     fontSize: 16,
     fontStyle: "italic",
+  },
+
+  // 👉 NOVOS ESTILOS: Caixinha do Aviso (Toast) Flutuante
+  toastContainer: {
+    position: "absolute",
+    bottom: 40,
+    alignSelf: "center",
+    backgroundColor: "#2E7D32", // Verde escuro combinando com seu app
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 9999, // Garante que fica por cima de toda a interface
+  },
+  toastText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
   },
 });
