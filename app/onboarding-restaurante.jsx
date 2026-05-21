@@ -475,6 +475,7 @@ export default function OnboardingRestauranteScreen() {
               setErros((prev) => ({ ...prev, nomeFantasia: null }));
             }}
             placeholder="Nome da sua loja"
+            placeholderTextColor="#999" // 👉 Adicionado
           />
           {erros.nomeFantasia && (
             <Text style={styles.textoErro}>{erros.nomeFantasia}</Text>
@@ -526,6 +527,7 @@ export default function OnboardingRestauranteScreen() {
             value={taxaEntrega}
             onChangeText={setTaxaEntrega}
             placeholder="Ex: 5,00 (0 para grátis)"
+            placeholderTextColor="#999" // 👉 Adicionado
             keyboardType="numeric"
           />
           <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
@@ -551,6 +553,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.cep}
             onChangeText={(texto) => handleEnderecoChange("cep", texto)}
             placeholder="00000-000"
+            placeholderTextColor="#999" // 👉 Adicionado
             keyboardType="numeric"
             maxLength={9}
           />
@@ -562,6 +565,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.rua}
             onChangeText={(texto) => handleEnderecoChange("rua", texto)}
             placeholder="Ex: Av. Paulista"
+            placeholderTextColor="#999" // 👉 Adicionado
           />
 
           <View style={styles.linhaDupla}>
@@ -572,6 +576,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.numero}
                 onChangeText={(texto) => handleEnderecoChange("numero", texto)}
                 placeholder="Ex: 1000"
+                placeholderTextColor="#999" // 👉 Adicionado
                 keyboardType="numeric"
               />
             </View>
@@ -584,6 +589,7 @@ export default function OnboardingRestauranteScreen() {
                   handleEnderecoChange("complemento", texto)
                 }
                 placeholder="Loja 2"
+                placeholderTextColor="#999" // 👉 Adicionado
               />
             </View>
           </View>
@@ -594,6 +600,7 @@ export default function OnboardingRestauranteScreen() {
             value={endereco.bairro}
             onChangeText={(texto) => handleEnderecoChange("bairro", texto)}
             placeholder="Bairro"
+            placeholderTextColor="#999" // 👉 Adicionado
           />
 
           <View style={styles.linhaDupla}>
@@ -604,6 +611,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.cidade}
                 onChangeText={(texto) => handleEnderecoChange("cidade", texto)}
                 placeholder="Cidade"
+                placeholderTextColor="#999" // 👉 Adicionado
               />
             </View>
             <View style={[styles.metade, { flex: 1 }]}>
@@ -613,6 +621,7 @@ export default function OnboardingRestauranteScreen() {
                 value={endereco.estado}
                 onChangeText={(texto) => handleEnderecoChange("estado", texto)}
                 placeholder="SP"
+                placeholderTextColor="#999" // 👉 Adicionado
                 maxLength={2}
                 autoCapitalize="characters"
               />
@@ -669,6 +678,8 @@ export default function OnboardingRestauranteScreen() {
                       onChangeText={(texto) =>
                         handleHoraChange(dia, "abertura", texto)
                       }
+                      placeholder="00:00" // 👉 Adicionado
+                      placeholderTextColor="#999" // 👉 Adicionado
                       keyboardType="numeric"
                       maxLength={5}
                     />
@@ -681,6 +692,8 @@ export default function OnboardingRestauranteScreen() {
                       onChangeText={(texto) =>
                         handleHoraChange(dia, "fechamento", texto)
                       }
+                      placeholder="00:00" // 👉 Adicionado
+                      placeholderTextColor="#999" // 👉 Adicionado
                       keyboardType="numeric"
                       maxLength={5}
                     />
