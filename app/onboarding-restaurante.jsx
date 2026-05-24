@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,49 +14,72 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
 
 // Imports do Firebase (Firestore e Auth)
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 // ⚠️ ATENÇÃO: Ajuste o caminho do seu Firebase aqui se necessário:
-import { auth, db } from '../src/config/firebase';
+import { auth, db } from "../src/config/firebase";
 
 export default function OnboardingRestauranteScreen() {
   const router = useRouter();
 
   const [logo, setLogo] = useState(null);
   const [capa, setCapa] = useState(null);
-  const [fazendoUpload, setFazendoUpload] = useState(false); 
+  const [fazendoUpload, setFazendoUpload] = useState(false);
 
-  const [nomeFantasia, setNomeFantasia] = useState(''); 
-  const [especialidade, setEspecialidade] = useState('');
+  const [nomeFantasia, setNomeFantasia] = useState("");
+  const [especialidade, setEspecialidade] = useState("");
+
+  const [taxaEntrega, setTaxaEntrega] = useState("0");
+  // 👉 NOVO ESTADO: Pedido Mínimo
+  const [pedidoMinimo, setPedidoMinimo] = useState("0");
+
   const [endereco, setEndereco] = useState({
-    cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: ''
+    cep: "",
+    rua: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
   });
   const [pagamentos, setPagamentos] = useState({
-    pix: false, cartao_credito: false, cartao_debito: false,
-    dinheiro: false, vale_refeicao: false, vale_alimentacao: false
+    pix: false,
+    cartao_credito: false,
+    cartao_debito: false,
+    dinheiro: false,
+    vale_refeicao: false,
+    vale_alimentacao: false,
   });
   const [horarios, setHorarios] = useState({
-    segunda: { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    terca:   { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    quarta:  { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    quinta:  { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    sexta:   { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    sabado:  { funciona: false, abertura: '08:00', fechamento: '18:00' },
-    domingo: { funciona: false, abertura: '08:00', fechamento: '18:00' },
+    segunda: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    terca: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    quarta: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    quinta: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    sexta: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    sabado: { funciona: false, abertura: "08:00", fechamento: "18:00" },
+    domingo: { funciona: false, abertura: "08:00", fechamento: "18:00" },
   });
 
   const [coordenadas, setCoordenadas] = useState({ lat: null, lng: null });
   const [buscandoCep, setBuscandoCep] = useState(false);
-  const [erros, setErros] = useState({}); 
+  const [erros, setErros] = useState({});
 
   const CATEGORIAS = [
-    'Marmitas', 'Bowls', 'Saladas', 'Wraps', 'Poke', 
-    'Vegano', 'Bebidas', 'Açaí & Sorvetes', 'Doces & Bolos', 'Refeição Livre'
+    "Marmitas",
+    "Bowls",
+    "Saladas",
+    "Wraps",
+    "Poke",
+    "Vegano",
+    "Bebidas",
+    "Açaí & Sorvetes",
+    "Doces & Bolos",
+    "Refeição Livre",
   ];
 
   // --- 1. BUSCAR DADOS INICIAIS ---
@@ -64,13 +87,22 @@ export default function OnboardingRestauranteScreen() {
     const unsubscribe = onAuthStateChanged(auth, async (usuarioAtual) => {
       if (usuarioAtual) {
         try {
-          const docRef = doc(db, 'restaurantes', usuarioAtual.uid);
+          const docRef = doc(db, "restaurantes", usuarioAtual.uid);
           const docSnap = await getDoc(docRef);
-          
+
           if (docSnap.exists()) {
             const dadosDb = docSnap.data();
             if (dadosDb.nome_fantasia || dadosDb.nomeFantasia) {
               setNomeFantasia(dadosDb.nome_fantasia || dadosDb.nomeFantasia);
+            }
+            if (dadosDb.taxa_entrega !== undefined) {
+              setTaxaEntrega(dadosDb.taxa_entrega.toString().replace(".", ","));
+            }
+            // 👉 SE JÁ TIVER SALVO ALGO ANTES, TRAZ O PEDIDO MÍNIMO FORMATADO
+            if (dadosDb.pedido_minimo !== undefined) {
+              setPedidoMinimo(
+                dadosDb.pedido_minimo.toString().replace(".", ","),
+              );
             }
           }
         } catch (error) {
@@ -80,16 +112,19 @@ export default function OnboardingRestauranteScreen() {
     });
 
     return () => unsubscribe();
-  }, []); 
+  }, []);
 
   const escolherImagem = async (tipo) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      if (Platform.OS === 'web') {
-        window.alert('Precisamos de acesso para adicionar as fotos.');
+
+    if (status !== "granted") {
+      if (Platform.OS === "web") {
+        window.alert("Precisamos de acesso para adicionar as fotos.");
       } else {
-        Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para adicionar as fotos da loja.');
+        Alert.alert(
+          "Permissão necessária",
+          "Precisamos de acesso à sua galeria para adicionar as fotos da loja.",
+        );
       }
       return;
     }
@@ -97,14 +132,14 @@ export default function OnboardingRestauranteScreen() {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: tipo === 'logo' ? [1, 1] : [16, 9], 
-      quality: 0.7, 
+      aspect: tipo === "logo" ? [1, 1] : [16, 9],
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      if (tipo === 'logo') {
+      if (tipo === "logo") {
         setLogo(result.assets[0].uri);
-        setErros(prev => ({ ...prev, logo: null }));
+        setErros((prev) => ({ ...prev, logo: null }));
       } else {
         setCapa(result.assets[0].uri);
       }
@@ -112,34 +147,37 @@ export default function OnboardingRestauranteScreen() {
   };
 
   const uploadParaCloudinary = async (imagemUri) => {
-    const CLOUD_NAME = 'damevu18u'; 
-    const UPLOAD_PRESET = 'kea9xf8r'; 
+    const CLOUD_NAME = "damevu18u";
+    const UPLOAD_PRESET = "kea9xf8r";
 
     const data = new FormData();
 
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       const responseBlob = await fetch(imagemUri);
       const blob = await responseBlob.blob();
-      data.append('file', blob);
+      data.append("file", blob);
     } else {
-      data.append('file', {
+      data.append("file", {
         uri: imagemUri,
-        type: 'image/jpeg', 
-        name: 'foto_upload.jpg',
+        type: "image/jpeg",
+        name: "foto_upload.jpg",
       });
     }
 
-    data.append('upload_preset', UPLOAD_PRESET);
+    data.append("upload_preset", UPLOAD_PRESET);
 
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: data,
-      });
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: data,
+        },
+      );
       const dados = await response.json();
-      
+
       if (dados.error) return null;
-      return dados.secure_url; 
+      return dados.secure_url;
     } catch (error) {
       console.log("Erro no upload:", error);
       return null;
@@ -148,29 +186,37 @@ export default function OnboardingRestauranteScreen() {
 
   const buscarCEP = async (cepLimpo) => {
     setBuscandoCep(true);
-    setErros(prev => ({ ...prev, cep: null }));
+    setErros((prev) => ({ ...prev, cep: null }));
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const response = await fetch(
+        `https://viacep.com.br/ws/${cepLimpo}/json/`,
+      );
       const data = await response.json();
 
       if (data.erro) {
-        setErros(prev => ({ ...prev, cep: 'CEP não encontrado.' }));
+        setErros((prev) => ({ ...prev, cep: "CEP não encontrado." }));
         setBuscandoCep(false);
         return;
       }
 
-      setEndereco(prev => ({
+      setEndereco((prev) => ({
         ...prev,
-        rua: data.logradouro || '',
-        bairro: data.bairro || '',
-        cidade: data.localidade || '',
-        estado: data.uf || ''
+        rua: data.logradouro || "",
+        bairro: data.bairro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || "",
       }));
 
-      setErros(prev => ({ ...prev, rua: null, bairro: null, cidade: null, estado: null }));
+      setErros((prev) => ({
+        ...prev,
+        rua: null,
+        bairro: null,
+        cidade: null,
+        estado: null,
+      }));
       buscarCoordenadas(data.logradouro, data.localidade, data.uf);
     } catch (error) {
-      setErros(prev => ({ ...prev, cep: 'Erro ao buscar o CEP.' }));
+      setErros((prev) => ({ ...prev, cep: "Erro ao buscar o CEP." }));
     } finally {
       setBuscandoCep(false);
     }
@@ -180,7 +226,7 @@ export default function OnboardingRestauranteScreen() {
     try {
       const query = `${rua}, ${cidade}, ${estado}, Brazil`;
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-      const response = await fetch(url); 
+      const response = await fetch(url);
 
       if (!response.ok) return;
 
@@ -196,46 +242,55 @@ export default function OnboardingRestauranteScreen() {
 
   const handleEnderecoChange = (campo, valor) => {
     let texto = valor;
-    setErros(prev => ({ ...prev, [campo]: null }));
+    setErros((prev) => ({ ...prev, [campo]: null }));
 
-    if (campo === 'cep') {
-      texto = texto.replace(/\D/g, '');
-      if (texto.length > 5) texto = texto.replace(/^(\d{5})(\d)/, '$1-$2');
+    if (campo === "cep") {
+      texto = texto.replace(/\D/g, "");
+      if (texto.length > 5) texto = texto.replace(/^(\d{5})(\d)/, "$1-$2");
       if (texto.length > 9) texto = texto.slice(0, 9);
-      
-      setEndereco(prev => ({ ...prev, [campo]: texto }));
 
-      const cepApenasNumeros = texto.replace(/\D/g, '');
+      setEndereco((prev) => ({ ...prev, [campo]: texto }));
+
+      const cepApenasNumeros = texto.replace(/\D/g, "");
       if (cepApenasNumeros.length === 8) buscarCEP(cepApenasNumeros);
     } else {
-      setEndereco(prev => ({ ...prev, [campo]: texto }));
+      setEndereco((prev) => ({ ...prev, [campo]: texto }));
     }
   };
 
   const togglePagamento = (chave) => {
-    setErros(prev => ({ ...prev, pagamentos: null }));
-    setPagamentos(prev => ({ ...prev, [chave]: !prev[chave] }));
+    setErros((prev) => ({ ...prev, pagamentos: null }));
+    setPagamentos((prev) => ({ ...prev, [chave]: !prev[chave] }));
   };
 
   const toggleDia = (dia) => {
-    setErros(prev => ({ ...prev, horarios: null }));
-    setHorarios(prev => ({ ...prev, [dia]: { ...prev[dia], funciona: !prev[dia].funciona } }));
+    setErros((prev) => ({ ...prev, horarios: null }));
+    setHorarios((prev) => ({
+      ...prev,
+      [dia]: { ...prev[dia], funciona: !prev[dia].funciona },
+    }));
   };
 
   const handleHoraChange = (dia, campo, valor) => {
-    setErros(prev => ({ ...prev, horarios: null }));
-    let formatado = valor.replace(/\D/g, ''); 
+    setErros((prev) => ({ ...prev, horarios: null }));
+    let formatado = valor.replace(/\D/g, "");
     if (formatado.length > 4) formatado = formatado.slice(0, 4);
-    if (formatado.length > 2) formatado = formatado.replace(/^(\d{2})(\d)/, '$1:$2');
-    setHorarios(prev => ({ ...prev, [dia]: { ...prev[dia], [campo]: formatado } }));
+    if (formatado.length > 2)
+      formatado = formatado.replace(/^(\d{2})(\d)/, "$1:$2");
+    setHorarios((prev) => ({
+      ...prev,
+      [dia]: { ...prev[dia], [campo]: formatado },
+    }));
   };
 
   const validarFormulario = () => {
     let novosErros = {};
 
-    if (!logo) novosErros.logo = "Por favor, adicione a Logo da sua loja."; 
-    if (!nomeFantasia.trim()) novosErros.nomeFantasia = "Informe o Nome Fantasia.";
-    if (!especialidade) novosErros.especialidade = "Selecione uma especialidade.";
+    if (!logo) novosErros.logo = "Por favor, adicione a Logo da sua loja.";
+    if (!nomeFantasia.trim())
+      novosErros.nomeFantasia = "Informe o Nome Fantasia.";
+    if (!especialidade)
+      novosErros.especialidade = "Selecione uma especialidade.";
     if (!endereco.cep) novosErros.cep = "CEP é obrigatório.";
     if (!endereco.rua) novosErros.rua = "Rua é obrigatória.";
     if (!endereco.numero) novosErros.numero = "Número é obrigatório.";
@@ -243,16 +298,23 @@ export default function OnboardingRestauranteScreen() {
     if (!endereco.cidade) novosErros.cidade = "Cidade é obrigatória.";
     if (!endereco.estado) novosErros.estado = "UF é obrigatória.";
 
-    const selecionouPagamento = Object.values(pagamentos).some(v => v);
-    if (!selecionouPagamento) novosErros.pagamentos = "Selecione pelo menos uma forma de pagamento.";
+    const selecionouPagamento = Object.values(pagamentos).some((v) => v);
+    if (!selecionouPagamento)
+      novosErros.pagamentos = "Selecione pelo menos uma forma de pagamento.";
 
-    const diasAtivos = Object.keys(horarios).filter(dia => horarios[dia].funciona);
+    const diasAtivos = Object.keys(horarios).filter(
+      (dia) => horarios[dia].funciona,
+    );
     if (diasAtivos.length === 0) {
       novosErros.horarios = "Selecione pelo menos um dia de funcionamento.";
     } else {
       for (let dia of diasAtivos) {
-        if (horarios[dia].abertura.length < 5 || horarios[dia].fechamento.length < 5) {
-          novosErros.horarios = "Preencha os horários corretamente (ex: 08:00).";
+        if (
+          horarios[dia].abertura.length < 5 ||
+          horarios[dia].fechamento.length < 5
+        ) {
+          novosErros.horarios =
+            "Preencha os horários corretamente (ex: 08:00).";
           break;
         }
       }
@@ -267,10 +329,13 @@ export default function OnboardingRestauranteScreen() {
 
     const usuarioAtual = auth.currentUser;
     if (!usuarioAtual) {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         window.alert("Você precisa estar logado para salvar esses dados.");
       } else {
-        Alert.alert("Erro", "Você precisa estar logado para salvar esses dados.");
+        Alert.alert(
+          "Erro",
+          "Você precisa estar logado para salvar esses dados.",
+        );
       }
       return;
     }
@@ -286,31 +351,45 @@ export default function OnboardingRestauranteScreen() {
         urlCapa = await uploadParaCloudinary(capa);
       }
 
+      const taxaFormatada = parseFloat(taxaEntrega.replace(",", ".") || 0);
+      // 👉 FORMATANDO O PEDIDO MÍNIMO PARA DECIMAL ANTES DE SALVAR
+      const pedidoMinimoFormatado = parseFloat(
+        pedidoMinimo.replace(",", ".") || 0,
+      );
+
       const dadosRestaurante = {
         imagens: {
           logoUrl: urlLogo,
-          capaUrl: urlCapa
+          capaUrl: urlCapa,
         },
         nome_fantasia: nomeFantasia,
         especialidade,
+        taxa_entrega: taxaFormatada,
+        pedido_minimo: pedidoMinimoFormatado, // 👉 ADICIONANDO NO PAYLOAD DO BANCO
         endereco,
         coordenadas,
         pagamentos,
         horarios,
-        onboardingConcluido: true 
+        onboardingConcluido: true,
       };
 
-      await setDoc(doc(db, 'restaurantes', usuarioAtual.uid), dadosRestaurante, { merge: true });
+      await setDoc(
+        doc(db, "restaurantes", usuarioAtual.uid),
+        dadosRestaurante,
+        { merge: true },
+      );
 
-      if (Platform.OS === 'web') {
-        window.alert('Sua loja foi configurada com sucesso!');
-        router.replace('/home-restaurante-screen'); 
+      if (Platform.OS === "web") {
+        window.alert("Sua loja foi configurada com sucesso!");
+        router.replace("/home-restaurante-screen");
       } else {
-        Alert.alert('Sucesso!', 'Sua loja foi configurada com sucesso!', [
-          { text: 'OK', onPress: () => router.replace('/home-restaurante-screen') }
+        Alert.alert("Sucesso!", "Sua loja foi configurada com sucesso!", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/home-restaurante-screen"),
+          },
         ]);
       }
-
     } catch (error) {
       console.error("Erro no Firebase:", error);
     } finally {
@@ -318,19 +397,35 @@ export default function OnboardingRestauranteScreen() {
     }
   };
 
-  const nomesDias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+  const namesDays = [
+    "segunda",
+    "terca",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sabado",
+    "domingo",
+  ];
   const labelsPagamentos = {
-    pix: 'PIX', cartao_credito: 'Cartão de Crédito', cartao_debito: 'Cartão de Débito',
-    dinheiro: 'Dinheiro', vale_refeicao: 'Vale Refeição', vale_alimentacao: 'Vale Alimentação'
+    pix: "PIX",
+    cartao_credito: "Cartão de Crédito",
+    cartao_debito: "Cartão de Débito",
+    dinheiro: "Dinheiro",
+    vale_refeicao: "Vale Refeição",
+    vale_alimentacao: "Vale Alimentação",
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.titulo}>Complete sua Loja</Text>
-          <Text style={styles.subtitulo}>Configure as informações que seus clientes irão ver.</Text>
+          <Text style={styles.subtitulo}>
+            Configure as informações que seus clientes irão ver.
+          </Text>
         </View>
 
         {/* --- CARD 1: IDENTIDADE VISUAL --- */}
@@ -338,19 +433,43 @@ export default function OnboardingRestauranteScreen() {
           <Text style={styles.cardTitulo}>1. Identidade Visual</Text>
           <Text style={styles.label}>Logo da Loja *</Text>
           <View style={styles.imageUploadContainer}>
-            <TouchableOpacity style={[styles.boxLogo, erros.logo && styles.inputErro]} onPress={() => escolherImagem('logo')}>
-              {logo ? <Image source={{ uri: logo }} style={styles.imagemPrevia} /> : <Ionicons name="camera-outline" size={32} color={erros.logo ? "#E53E3E" : "#A0A0A0"} />}
+            <TouchableOpacity
+              style={[styles.boxLogo, erros.logo && styles.inputErro]}
+              onPress={() => escolherImagem("logo")}
+            >
+              {logo ? (
+                <Image source={{ uri: logo }} style={styles.imagemPrevia} />
+              ) : (
+                <Ionicons
+                  name="camera-outline"
+                  size={32}
+                  color={erros.logo ? "#E53E3E" : "#A0A0A0"}
+                />
+              )}
             </TouchableOpacity>
-            <Text style={styles.imageHelperText}>Toque para escolher uma foto quadrada.</Text>
+            <Text style={styles.imageHelperText}>
+              Toque para escolher uma foto quadrada.
+            </Text>
           </View>
           {erros.logo && <Text style={styles.textoErro}>{erros.logo}</Text>}
 
-          <Text style={[styles.label, { marginTop: 20 }]}>Foto de Capa (Opcional)</Text>
+          <Text style={[styles.label, { marginTop: 20 }]}>
+            Foto de Capa (Opcional)
+          </Text>
           <View style={styles.imageUploadContainer}>
-            <TouchableOpacity style={styles.boxCapa} onPress={() => escolherImagem('capa')}>
-              {capa ? <Image source={{ uri: capa }} style={styles.imagemPrevia} /> : <Ionicons name="image-outline" size={32} color="#A0A0A0" />}
+            <TouchableOpacity
+              style={styles.boxCapa}
+              onPress={() => escolherImagem("capa")}
+            >
+              {capa ? (
+                <Image source={{ uri: capa }} style={styles.imagemPrevia} />
+              ) : (
+                <Ionicons name="image-outline" size={32} color="#A0A0A0" />
+              )}
             </TouchableOpacity>
-            <Text style={styles.imageHelperText}>Essa foto fica no topo do seu cardápio.</Text>
+            <Text style={styles.imageHelperText}>
+              Essa foto fica no topo do seu cardápio.
+            </Text>
           </View>
         </View>
 
@@ -361,16 +480,21 @@ export default function OnboardingRestauranteScreen() {
           <TextInput
             style={[styles.input, erros.nomeFantasia && styles.inputErro]}
             value={nomeFantasia}
-            onChangeText={(texto) => { setNomeFantasia(texto); setErros(prev => ({...prev, nomeFantasia: null})) }}
+            onChangeText={(texto) => {
+              setNomeFantasia(texto);
+              setErros((prev) => ({ ...prev, nomeFantasia: null }));
+            }}
             placeholder="Nome da sua loja"
+            placeholderTextColor="#999"
           />
-          {erros.nomeFantasia && <Text style={styles.textoErro}>{erros.nomeFantasia}</Text>}
+          {erros.nomeFantasia && (
+            <Text style={styles.textoErro}>{erros.nomeFantasia}</Text>
+          )}
 
           <Text style={styles.label}>Especialidade Principal *</Text>
-          {}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={true} 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
             persistentScrollbar={true}
             style={styles.chipScroll}
             contentContainerStyle={{ paddingRight: 20 }}
@@ -380,15 +504,60 @@ export default function OnboardingRestauranteScreen() {
               return (
                 <TouchableOpacity
                   key={index}
-                  style={[styles.chip, selecionado && styles.chipSelecionado, erros.especialidade && styles.chipErro]}
-                  onPress={() => { setEspecialidade(cat); setErros(prev => ({...prev, especialidade: null})) }}
+                  style={[
+                    styles.chip,
+                    selecionado && styles.chipSelecionado,
+                    erros.especialidade && styles.chipErro,
+                  ]}
+                  onPress={() => {
+                    setEspecialidade(cat);
+                    setErros((prev) => ({ ...prev, especialidade: null }));
+                  }}
                 >
-                  <Text style={[styles.chipTexto, selecionado && styles.chipTextoSelecionado]}>{cat}</Text>
+                  <Text
+                    style={[
+                      styles.chipTexto,
+                      selecionado && styles.chipTextoSelecionado,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          {erros.especialidade && <Text style={styles.textoErro}>{erros.especialidade}</Text>}
+          {erros.especialidade && (
+            <Text style={styles.textoErro}>{erros.especialidade}</Text>
+          )}
+
+          <Text style={styles.label}>Taxa de Entrega (R$)</Text>
+          <TextInput
+            style={styles.input}
+            value={taxaEntrega}
+            onChangeText={setTaxaEntrega}
+            placeholder="Ex: 5,00 (0 para grátis)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+          />
+          <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+            Deixe 0 para oferecer Frete Grátis.
+          </Text>
+
+          {/* 👉 NOVO CAMPO: Pedido Mínimo na Interface */}
+          <Text style={[styles.label, { marginTop: 20 }]}>
+            Pedido Mínimo (R$)
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={pedidoMinimo}
+            onChangeText={setPedidoMinimo}
+            placeholder="Ex: 20,00 (0 para sem mínimo)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+          />
+          <Text style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+            Deixe 0 se não houver valor mínimo para pedidos.
+          </Text>
         </View>
 
         {/* --- CARD 3: ENDEREÇO --- */}
@@ -396,43 +565,91 @@ export default function OnboardingRestauranteScreen() {
           <Text style={styles.cardTitulo}>3. Endereço da Loja</Text>
           <View style={styles.labelContainer}>
             <Text style={styles.label}>CEP *</Text>
-            {buscandoCep && <ActivityIndicator size="small" color="#93BD57" style={{ marginLeft: 10, marginTop: 10 }} />}
+            {buscandoCep && (
+              <ActivityIndicator
+                size="small"
+                color="#93BD57"
+                style={{ marginLeft: 10, marginTop: 10 }}
+              />
+            )}
           </View>
           <TextInput
             style={[styles.input, erros.cep && styles.inputErro]}
             value={endereco.cep}
-            onChangeText={(texto) => handleEnderecoChange('cep', texto)}
+            onChangeText={(texto) => handleEnderecoChange("cep", texto)}
             placeholder="00000-000"
+            placeholderTextColor="#999"
             keyboardType="numeric"
             maxLength={9}
           />
           {erros.cep && <Text style={styles.textoErro}>{erros.cep}</Text>}
 
           <Text style={styles.label}>Rua / Avenida *</Text>
-          <TextInput style={[styles.input, erros.rua && styles.inputErro]} value={endereco.rua} onChangeText={(texto) => handleEnderecoChange('rua', texto)} placeholder="Ex: Av. Paulista" />
+          <TextInput
+            style={[styles.input, erros.rua && styles.inputErro]}
+            value={endereco.rua}
+            onChangeText={(texto) => handleEnderecoChange("rua", texto)}
+            placeholder="Ex: Av. Paulista"
+            placeholderTextColor="#999"
+          />
 
           <View style={styles.linhaDupla}>
             <View style={styles.metade}>
               <Text style={styles.label}>Número *</Text>
-              <TextInput style={[styles.input, erros.numero && styles.inputErro]} value={endereco.numero} onChangeText={(texto) => handleEnderecoChange('numero', texto)} placeholder="Ex: 1000" keyboardType="numeric" />
+              <TextInput
+                style={[styles.input, erros.numero && styles.inputErro]}
+                value={endereco.numero}
+                onChangeText={(texto) => handleEnderecoChange("numero", texto)}
+                placeholder="Ex: 1000"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+              />
             </View>
             <View style={styles.metade}>
               <Text style={styles.label}>Complemento</Text>
-              <TextInput style={styles.input} value={endereco.complemento} onChangeText={(texto) => handleEnderecoChange('complemento', texto)} placeholder="Loja 2" />
+              <TextInput
+                style={styles.input}
+                value={endereco.complemento}
+                onChangeText={(texto) =>
+                  handleEnderecoChange("complemento", texto)
+                }
+                placeholder="Loja 2"
+                placeholderTextColor="#999"
+              />
             </View>
           </View>
 
           <Text style={styles.label}>Bairro *</Text>
-          <TextInput style={[styles.input, erros.bairro && styles.inputErro]} value={endereco.bairro} onChangeText={(texto) => handleEnderecoChange('bairro', texto)} placeholder="Bairro" />
+          <TextInput
+            style={[styles.input, erros.bairro && styles.inputErro]}
+            value={endereco.bairro}
+            onChangeText={(texto) => handleEnderecoChange("bairro", texto)}
+            placeholder="Bairro"
+            placeholderTextColor="#999"
+          />
 
           <View style={styles.linhaDupla}>
             <View style={[styles.metade, { flex: 2, marginRight: 10 }]}>
               <Text style={styles.label}>Cidade *</Text>
-              <TextInput style={[styles.input, erros.cidade && styles.inputErro]} value={endereco.cidade} onChangeText={(texto) => handleEnderecoChange('cidade', texto)} placeholder="Cidade" />
+              <TextInput
+                style={[styles.input, erros.cidade && styles.inputErro]}
+                value={endereco.cidade}
+                onChangeText={(texto) => handleEnderecoChange("cidade", texto)}
+                placeholder="Cidade"
+                placeholderTextColor="#999"
+              />
             </View>
             <View style={[styles.metade, { flex: 1 }]}>
               <Text style={styles.label}>UF *</Text>
-              <TextInput style={[styles.input, erros.estado && styles.inputErro]} value={endereco.estado} onChangeText={(texto) => handleEnderecoChange('estado', texto)} placeholder="SP" maxLength={2} autoCapitalize="characters" />
+              <TextInput
+                style={[styles.input, erros.estado && styles.inputErro]}
+                value={endereco.estado}
+                onChangeText={(texto) => handleEnderecoChange("estado", texto)}
+                placeholder="SP"
+                placeholderTextColor="#999"
+                maxLength={2}
+                autoCapitalize="characters"
+              />
             </View>
           </View>
         </View>
@@ -442,9 +659,19 @@ export default function OnboardingRestauranteScreen() {
           <Text style={styles.cardTitulo}>4. Formas de Pagamento *</Text>
           <View style={styles.gridPagamentos}>
             {Object.keys(pagamentos).map((chave) => (
-              <TouchableOpacity key={chave} style={styles.checkboxContainer} onPress={() => togglePagamento(chave)}>
-                <Ionicons name={pagamentos[chave] ? "checkbox" : "square-outline"} size={24} color={pagamentos[chave] ? "#93BD57" : "#A0A0A0"} />
-                <Text style={styles.textoCheckbox}>{labelsPagamentos[chave]}</Text>
+              <TouchableOpacity
+                key={chave}
+                style={styles.checkboxContainer}
+                onPress={() => togglePagamento(chave)}
+              >
+                <Ionicons
+                  name={pagamentos[chave] ? "checkbox" : "square-outline"}
+                  size={24}
+                  color={pagamentos[chave] ? "#93BD57" : "#A0A0A0"}
+                />
+                <Text style={styles.textoCheckbox}>
+                  {labelsPagamentos[chave]}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -453,83 +680,230 @@ export default function OnboardingRestauranteScreen() {
         {/* --- CARD 5: HORÁRIOS --- */}
         <View style={styles.card}>
           <Text style={styles.cardTitulo}>5. Dias e Horários *</Text>
-          {nomesDias.map((dia) => (
+          {namesDays.map((dia) => (
             <View key={dia} style={styles.itemDia}>
               <View style={styles.linhaDiaTopo}>
-                <Text style={styles.nomeDiaTexto}>{dia.charAt(0).toUpperCase() + dia.slice(1)}</Text>
-                <Switch trackColor={{ false: "#E0E0E0", true: "#c5e1a5" }} thumbColor={horarios[dia].funciona ? "#93BD57" : "#f4f3f4"} onValueChange={() => toggleDia(dia)} value={horarios[dia].funciona} />
+                <Text style={styles.nomeDiaTexto}>
+                  {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                </Text>
+                <Switch
+                  trackColor={{ false: "#E0E0E0", true: "#c5e1a5" }}
+                  thumbColor={horarios[dia].funciona ? "#93BD57" : "#f4f3f4"}
+                  onValueChange={() => toggleDia(dia)}
+                  value={horarios[dia].funciona}
+                />
               </View>
               {horarios[dia].funciona && (
                 <View style={styles.linhaHoras}>
-                  <View style={styles.colunaHora}><Text style={styles.labelHora}>Abre às:</Text><TextInput style={styles.inputHora} value={horarios[dia].abertura} onChangeText={(texto) => handleHoraChange(dia, 'abertura', texto)} keyboardType="numeric" maxLength={5} /></View>
-                  <View style={styles.colunaHora}><Text style={styles.labelHora}>Fecha às:</Text><TextInput style={styles.inputHora} value={horarios[dia].fechamento} onChangeText={(texto) => handleHoraChange(dia, 'fechamento', texto)} keyboardType="numeric" maxLength={5} /></View>
+                  <View style={styles.colunaHora}>
+                    <Text style={styles.labelHora}>Abre às:</Text>
+                    <TextInput
+                      style={styles.inputHora}
+                      value={horarios[dia].abertura}
+                      onChangeText={(texto) =>
+                        handleHoraChange(dia, "abertura", texto)
+                      }
+                      placeholder="00:00"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={5}
+                    />
+                  </View>
+                  <View style={styles.colunaHora}>
+                    <Text style={styles.labelHora}>Fecha às:</Text>
+                    <TextInput
+                      style={styles.inputHora}
+                      value={horarios[dia].fechamento}
+                      onChangeText={(texto) =>
+                        handleHoraChange(dia, "fechamento", texto)
+                      }
+                      placeholder="00:00"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={5}
+                    />
+                  </View>
                 </View>
               )}
             </View>
           ))}
         </View>
 
-        <TouchableOpacity style={[styles.botao, fazendoUpload && { backgroundColor: '#c5e1a5' }]} onPress={handleSalvar} disabled={fazendoUpload}>
-          {fazendoUpload ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.textoBotao}>Salvar e Continuar</Text>}
+        <TouchableOpacity
+          style={[
+            styles.botao,
+            fazendoUpload && { backgroundColor: "#c5e1a5" },
+          ]}
+          onPress={handleSalvar}
+          disabled={fazendoUpload}
+        >
+          {fazendoUpload ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text style={styles.textoBotao}>Salvar e Continuar</Text>
+          )}
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F4F6F8' },
-  
+  safeArea: { flex: 1, backgroundColor: "#F4F6F8" },
   scrollContainer: { paddingHorizontal: 70, paddingTop: 20, paddingBottom: 50 },
-  
   header: { marginBottom: 20 },
-  titulo: { fontSize: 28, fontWeight: 'bold', color: '#93BD57', marginBottom: 5 },
-  subtitulo: { fontSize: 15, color: '#666' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 18, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  cardTitulo: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#EEE', paddingBottom: 8 },
-  imageUploadContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
-  boxLogo: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#DDD', borderStyle: 'dashed' },
-  boxCapa: { width: 120, height: 70, borderRadius: 8, backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#DDD', borderStyle: 'dashed' },
-  imagemPrevia: { width: '100%', height: '100%' },
-  imageHelperText: { flex: 1, marginLeft: 15, fontSize: 13, color: '#888' },
-  labelContainer: { flexDirection: 'row', alignItems: 'center' },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#555', marginBottom: 6, marginTop: 10 },
-  input: { backgroundColor: '#F9FAFB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#E5E7EB', fontSize: 15, color: '#333' },
-  inputErro: { borderColor: '#E53E3E', backgroundColor: '#FFF5F5' },
-  textoErro: { color: '#E53E3E', fontSize: 12, marginTop: 4, fontWeight: '500' },
-  linhaDupla: { flexDirection: 'row', justifyContent: 'space-between' },
-  metade: { flex: 1, marginRight: 5 }, 
-
-  chipScroll: { 
-    flexDirection: 'row', 
+  titulo: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#93BD57",
+    marginBottom: 5,
+  },
+  subtitulo: { fontSize: 15, color: "#666" },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardTitulo: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+    paddingBottom: 8,
+  },
+  imageUploadContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  boxLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderStyle: "dashed",
+  },
+  boxCapa: {
+    width: 120,
+    height: 70,
+    borderRadius: 8,
+    backgroundColor: "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderStyle: "dashed",
+  },
+  imagemPrevia: { width: "100%", height: "100%" },
+  imageHelperText: { flex: 1, marginLeft: 15, fontSize: 13, color: "#888" },
+  labelContainer: { flexDirection: "row", alignItems: "center" },
+  label: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#555",
+    marginBottom: 6,
     marginTop: 10,
-    paddingBottom: 15 
   },
-  chip: { 
-    backgroundColor: '#F0F0F0', 
-    paddingHorizontal: 16, 
-    paddingVertical: 10, 
-    borderRadius: 20, 
-    marginRight: 10, 
-    borderWidth: 1, 
-    borderColor: '#E0E0E0' 
+  input: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    fontSize: 15,
+    color: "#333",
   },
-  chipSelecionado: { backgroundColor: '#93BD57', borderColor: '#93BD57' },
-  chipErro: { borderColor: '#E53E3E' },
-  chipTexto: { color: '#666', fontWeight: '600' },
-  chipTextoSelecionado: { color: '#FFF' },
-
-  gridPagamentos: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 },
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', width: '48%', marginBottom: 15 },
-  textoCheckbox: { marginLeft: 8, fontSize: 14, color: '#444' },
-  itemDia: { marginBottom: 15, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  linhaDiaTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  nomeDiaTexto: { fontSize: 16, fontWeight: '600', color: '#444' },
-  linhaHoras: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  colunaHora: { width: '48%' },
-  labelHora: { fontSize: 12, color: '#888', marginBottom: 5 },
-  inputHora: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 6, padding: 10, textAlign: 'center', fontSize: 15, fontWeight: 'bold', color: '#333' },
-  botao: { backgroundColor: '#93BD57', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 10, elevation: 3 },
-  textoBotao: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+  inputErro: { borderColor: "#E53E3E", backgroundColor: "#FFF5F5" },
+  textoErro: {
+    color: "#E53E3E",
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  linhaDupla: { flexDirection: "row", justifyContent: "space-between" },
+  metade: { flex: 1, marginRight: 5 },
+  chipScroll: {
+    flexDirection: "row",
+    marginTop: 10,
+    paddingBottom: 15,
+  },
+  chip: {
+    backgroundColor: "#F0F0F0",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  chipSelecionado: { backgroundColor: "#93BD57", borderColor: "#93BD57" },
+  chipErro: { borderColor: "#E53E3E" },
+  chipTexto: { color: "#666", fontWeight: "600" },
+  chipTextoSelecionado: { color: "#FFF" },
+  gridPagamentos: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "48%",
+    marginBottom: 15,
+  },
+  textoCheckbox: { marginLeft: 8, fontSize: 14, color: "#444" },
+  itemDia: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  linhaDiaTopo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  nomeDiaTexto: { fontSize: 16, fontWeight: "600", color: "#444" },
+  linhaHoras: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  colunaHora: { width: "48%" },
+  labelHora: { fontSize: 12, color: "#888", marginBottom: 5 },
+  inputHora: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 6,
+    padding: 10,
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  botao: {
+    backgroundColor: "#93BD57",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+    elevation: 3,
+  },
+  textoBotao: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

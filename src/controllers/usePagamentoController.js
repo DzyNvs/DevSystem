@@ -52,21 +52,30 @@ export const usePagamentoController = () => {
 
   const gerarPagamentoMercadoPago = async () => {
     try {
-      const mpItems = itens.map(item => ({
-        title: item.nome,
-        description: item.descricao || 'Produto FitWay',
-        quantity: item.qtd,
-        currency_id: 'BRL',
-        unit_price: Number(item.preco),
-      }));
+      // Montamos a descrição completa do pedido para exibir no checkout MP
+      const descricaoItens = itens
+        .map((item) => `${item.qtd}x ${item.nome}`)
+        .join(', ');
 
-      if (taxaEntrega > 0) {
-        mpItems.push({ title: 'Taxa de Entrega', quantity: 1, currency_id: 'BRL', unit_price: Number(taxaEntrega) });
-      }
+      const descricaoCompleta = [
+        descricaoItens,
+        taxaEntrega > 0 ? `Taxa de entrega: R$ ${taxaEntrega.toFixed(2)}` : 'Entrega grátis',
+        valorDesconto > 0 ? `Desconto FitCoins (${percentualDesconto}%): -R$ ${valorDesconto.toFixed(2)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
 
-      if (valorDesconto > 0) {
-        mpItems.push({ title: `Desconto FitCoins (${percentualDesconto}%)`, quantity: 1, currency_id: 'BRL', unit_price: -Number(valorDesconto) });
-      }
+      // ✅ Um único item com o totalFinal já calculado — evita unit_price negativo
+      // que a API do Mercado Pago não aceita e derruba toda a preferência
+      const mpItems = [
+        {
+          title: 'Pedido FitWay',
+          description: descricaoCompleta,
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: Number(totalFinal.toFixed(2)),
+        },
+      ];
 
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
@@ -76,12 +85,22 @@ export const usePagamentoController = () => {
         },
         body: JSON.stringify({
           items: mpItems,
-          back_urls: { success: 'https://seusite.com/sucesso', failure: 'https://seusite.com/falha', pending: 'https://seusite.com/pendente' },
+          back_urls: {
+            success: 'https://fitway.app/sucesso',
+            failure: 'https://fitway.app/falha',
+            pending: 'https://fitway.app/pendente',
+          },
           auto_return: 'approved',
         }),
       });
 
       const data = await response.json();
+
+      if (!data.sandbox_init_point && !data.init_point) {
+        console.error('Resposta MP sem link:', JSON.stringify(data));
+        throw new Error('Mercado Pago não retornou link de pagamento.');
+      }
+
       return data.sandbox_init_point || data.init_point;
     } catch (error) {
       console.error('Erro na API do Mercado Pago:', error);
@@ -105,18 +124,14 @@ export const usePagamentoController = () => {
         linkPagamento = await gerarPagamentoMercadoPago();
       }
 
-      // Debita FitCoins se o desconto foi aplicado
-      if (usarFitCoins && valorDesconto > 0) {
-        await AvaliacaoModel.usarDesconto(user.uid);
-      }
-
       const codigoEntrega = Math.floor(1000 + Math.random() * 9000).toString();
 
       const dadosPedido = {
         id_restaurante: idRestauranteAtual,
         id_consumidor: user.uid,
         id_motorista: null,
-        status: 'pendente',
+        // Pedidos online entram como 'aguardando_pagamento' até confirmação do MP
+        status: tipoPagamento === 'online' ? 'aguardando_pagamento' : 'pendente',
         codigo_entrega: codigoEntrega,
         itens,
         subtotal,
@@ -130,18 +145,59 @@ export const usePagamentoController = () => {
       };
 
       const idPedidoGerado = await PedidoModel.criarPedido(dadosPedido);
-      limparCarrinho();
 
       if (tipoPagamento === 'online' && linkPagamento) {
-        await WebBrowser.openBrowserAsync(linkPagamento);
+        const resultado = await WebBrowser.openBrowserAsync(linkPagamento);
+
+        const urlRetorno = resultado?.url || '';
+
+        // Bloqueia apenas o que é explicitamente uma falha de pagamento
+        const pagamentoFalhou =
+          urlRetorno.includes('/falha') ||
+          urlRetorno.includes('failure') ||
+          urlRetorno.includes('status=rejected') ||
+          urlRetorno.includes('status=cancelled');
+
+        // Browser fechado pelo botão "X" do sistema sem navegar para nenhuma URL
+        const browserFechadoManualmente =
+          resultado?.type === 'cancel' && !urlRetorno;
+
+        if (pagamentoFalhou) {
+          await PedidoModel.atualizarStatusPedido(idPedidoGerado, 'cancelado');
+          throw new Error('PAGAMENTO_RECUSADO');
+        }
+
+        if (browserFechadoManualmente) {
+          await PedidoModel.atualizarStatusPedido(idPedidoGerado, 'cancelado');
+          throw new Error('PAGAMENTO_CANCELADO');
+        }
+
+        // Pagamento aprovado, pendente, ou browser retornou sem URL (sandbox normal)
+        // → prossegue para confirmar o pedido
+        const statusFinal = urlRetorno.includes('pending') || urlRetorno.includes('/pendente')
+          ? 'pendente'
+          : 'pendente'; // Restaurante confirma após receber
+        await PedidoModel.atualizarStatusPedido(idPedidoGerado, statusFinal);
       }
+
+      // ✅ Só debita FitCoins e limpa carrinho após confirmação do pagamento
+      if (usarFitCoins && valorDesconto > 0) {
+        await AvaliacaoModel.usarDesconto(user.uid);
+      }
+      limparCarrinho();
 
       alert('Pedido gerado com sucesso! Redirecionando para acompanhamento...');
       router.replace({ pathname: 'acompanhamento', params: { idPedido: idPedidoGerado } });
 
     } catch (error) {
-      alert('Ocorreu um erro ao processar seu pedido.');
       console.error(error);
+      if (error.message === 'PAGAMENTO_RECUSADO') {
+        alert('Pagamento recusado. Verifique os dados do cartão, saldo disponível ou tente outra forma de pagamento.');
+      } else if (error.message === 'PAGAMENTO_CANCELADO') {
+        alert('Pagamento não concluído. Seu pedido foi cancelado. Tente novamente quando quiser.');
+      } else {
+        alert('Ocorreu um erro ao processar seu pedido. Tente novamente.');
+      }
     } finally {
       setCarregando(false);
     }

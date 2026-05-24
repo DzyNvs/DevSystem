@@ -24,7 +24,10 @@ export function PagamentoScreen() {
       <HeaderConsumidor />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="arrow-back" size={24} color="#333" />
           <Text style={styles.backText}>Voltar para sacola</Text>
         </TouchableOpacity>
@@ -67,12 +70,27 @@ export function PagamentoScreen() {
 
           <View style={styles.resumoRow}>
             <Text style={styles.resumoLabel}>Subtotal</Text>
-            <Text style={styles.resumoValor}>R$ {ctrl.subtotal.toFixed(2).replace('.', ',')}</Text>
+            <Text style={styles.resumoValor}>
+              R$ {ctrl.subtotal.toFixed(2).replace(".", ",")}
+            </Text>
           </View>
 
           <View style={styles.resumoRow}>
             <Text style={styles.resumoLabel}>Taxa de Entrega</Text>
-            <Text style={styles.resumoValor}>R$ {ctrl.taxaEntrega.toFixed(2).replace('.', ',')}</Text>
+            {/* 👉 Agora ele verifica se é 0 e exibe 'Grátis' */}
+            <Text
+              style={[
+                styles.resumoValor,
+                ctrl.taxaEntrega === 0 && {
+                  color: "#2E7D32",
+                  fontWeight: "bold",
+                },
+              ]}
+            >
+              {ctrl.taxaEntrega === 0
+                ? "Grátis"
+                : `R$ ${ctrl.taxaEntrega.toFixed(2).replace(".", ",")}`}
+            </Text>
           </View>
 
           {ctrl.valorDesconto > 0 && (
@@ -90,7 +108,9 @@ export function PagamentoScreen() {
 
           <View style={styles.resumoRow}>
             <Text style={styles.resumoTotalLabel}>Total a Pagar</Text>
-            <Text style={styles.resumoTotalValor}>R$ {ctrl.totalFinal.toFixed(2).replace('.', ',')}</Text>
+            <Text style={styles.resumoTotalValor}>
+              R$ {ctrl.totalFinal.toFixed(2).replace(".", ",")}
+            </Text>
           </View>
         </View>
 
@@ -101,16 +121,38 @@ export function PagamentoScreen() {
             style={[styles.tab, ctrl.tipoPagamento === 'online' && styles.tabActive]}
             onPress={() => ctrl.setTipoPagamento('online')}
           >
-            <Ionicons name="phone-portrait-outline" size={20} color={ctrl.tipoPagamento === 'online' ? '#FFF' : '#555'} />
-            <Text style={[styles.tabText, ctrl.tipoPagamento === 'online' && styles.tabTextActive]}>Pelo App</Text>
+            <Ionicons
+              name="phone-portrait-outline"
+              size={20}
+              color={ctrl.tipoPagamento === "online" ? "#FFF" : "#555"}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                ctrl.tipoPagamento === "online" && styles.tabTextActive,
+              ]}
+            >
+              Pelo App
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.tab, ctrl.tipoPagamento === 'entrega' && styles.tabActive]}
             onPress={() => ctrl.setTipoPagamento('entrega')}
           >
-            <Ionicons name="home-outline" size={20} color={ctrl.tipoPagamento === 'entrega' ? '#FFF' : '#555'} />
-            <Text style={[styles.tabText, ctrl.tipoPagamento === 'entrega' && styles.tabTextActive]}>Na Entrega</Text>
+            <Ionicons
+              name="home-outline"
+              size={20}
+              color={ctrl.tipoPagamento === "entrega" ? "#FFF" : "#555"}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                ctrl.tipoPagamento === "entrega" && styles.tabTextActive,
+              ]}
+            >
+              Na Entrega
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -163,7 +205,9 @@ export function PagamentoScreen() {
               style={{ marginRight: 10 }}
             />
             <Text style={styles.btnFinalizarText}>
-              {ctrl.tipoPagamento === 'online' ? 'Pagar com Mercado Pago' : 'Finalizar Pedido'}
+              {ctrl.tipoPagamento === "online"
+                ? "Pagar com Mercado Pago"
+                : "Finalizar Pedido"}
             </Text>
           </TouchableOpacity>
         )}

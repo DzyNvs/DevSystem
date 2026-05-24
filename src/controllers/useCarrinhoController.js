@@ -1,12 +1,18 @@
-import { useState, useEffect } from 'react';
-import { router } from 'expo-router';
-import { useCarrinhoStore } from './useCarrinhoStore';
-import { RestauranteModel } from '../models/RestauranteModel';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { RestauranteModel } from "../models/RestauranteModel";
+import { useCarrinhoStore } from "./useCarrinhoStore";
 
 export const useCarrinhoController = () => {
   // Puxa tudo que precisamos do Zustand
-  const { itens, idRestauranteAtual, adicionarItem, removerItem, limparCarrinho } = useCarrinhoStore();
-  
+  const {
+    itens,
+    idRestauranteAtual,
+    adicionarItem,
+    removerItem,
+    limparCarrinho,
+  } = useCarrinhoStore();
+
   const [restaurante, setRestaurante] = useState(null);
   const [carregando, setCarregando] = useState(false);
 
@@ -25,8 +31,8 @@ export const useCarrinhoController = () => {
       const dados = await RestauranteModel.buscarPorId(idRestauranteAtual);
       if (dados) {
         setRestaurante({
-          nome: dados.nome_fantasia || dados.razao_social || 'Restaurante',
-          taxaEntrega: dados.taxa_entrega || 5.00 // Padrão R$ 5,00 se o restaurante não tiver cadastrado
+          nome: dados.nome_fantasia || dados.razao_social || "Restaurante",
+          taxaEntrega: dados.taxa_entrega || 5.0, // Padrão R$ 5,00 se o restaurante não tiver cadastrado
         });
       }
     } catch (error) {
@@ -36,8 +42,15 @@ export const useCarrinhoController = () => {
     }
   };
 
-  // Cálculos financeiros
-  const subtotal = itens.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
+  // Cálculos financeiros e nutricionais
+  const subtotal = itens.reduce((acc, item) => acc + item.preco * item.qtd, 0);
+
+  // 👉 NOVO: Cálculo do total de calorias da sacola
+  const totalCalorias = itens.reduce(
+    (acc, item) => acc + (Number(item.calorias) || 0) * item.qtd,
+    0,
+  );
+
   const taxaEntrega = restaurante?.taxaEntrega || 0;
   const totalFinal = subtotal + taxaEntrega;
 
@@ -47,7 +60,7 @@ export const useCarrinhoController = () => {
       return;
     }
     // A rota que vamos criar no próximo passo!
-    router.push('/consumidor/pagamento'); 
+    router.push("/consumidor/pagamento");
   };
 
   return {
@@ -55,11 +68,12 @@ export const useCarrinhoController = () => {
     restaurante,
     carregando,
     subtotal,
+    totalCalorias, // 👉 Exportando as calorias para a View
     taxaEntrega,
     totalFinal,
-    adicionarItem, // Usado para o botão "+"
-    removerItem,   // Usado para o botão "-"
+    adicionarItem,
+    removerItem,
     limparCarrinho,
-    irParaPagamento
+    irParaPagamento,
   };
 };

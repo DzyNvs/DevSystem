@@ -5,8 +5,64 @@ import { Alert, Platform } from 'react-native';
 import { db } from '../config/firebase';
 import { AuthModel } from '../models/AuthModel';
 
+const validarCPF = (cpf) => {
+  const numeros = cpf.replace(/\D/g, '');
+
+  if (numeros.length !== 11) return false;
+
+  // Rejeita sequências iguais: 000.000.000-00, 111.111.111-11, etc.
+  if (/^(\d)\1{10}$/.test(numeros)) return false;
+
+  // Valida 1º dígito verificador
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(numeros[i]) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(numeros[9])) return false;
+
+  // Valida 2º dígito verificador
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(numeros[i]) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(numeros[10])) return false;
+
+  return true;
+};
+
+// Retorna 'ok', 'vazia', 'invalida' ou 'futura'
+const validarDataNascimento = (dataStr) => {
+  if (!dataStr || dataStr.length < 10) return 'vazia';
+
+  const partes = dataStr.split('/');
+  if (partes.length !== 3) return 'invalida';
+
+  const dia = parseInt(partes[0], 10);
+  const mes = parseInt(partes[1], 10) - 1; // mês base 0
+  const ano = parseInt(partes[2], 10);
+
+  // Checa se os valores fazem sentido antes de criar o objeto
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return 'invalida';
+  if (ano < 1900 || ano > 9999) return 'invalida';
+
+  const data = new Date(ano, mes, dia);
+
+  // Garante que o Date não "estourou" para o mês seguinte (ex: 31/02)
+  if (
+    data.getFullYear() !== ano ||
+    data.getMonth() !== mes ||
+    data.getDate() !== dia
+  ) return 'invalida';
+
+  // Data não pode ser hoje nem no futuro
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  if (data >= hoje) return 'futura';
+
+  return 'ok';
+};
+
 export const useAuthController = () => {
-  // Mudança aqui: de boolean para string
   const [tipoUsuario, setTipoUsuario] = useState('consumidor'); // 'consumidor', 'restaurante', 'motoboy'
   
   const [carregando, setCarregando] = useState(false);
@@ -19,7 +75,7 @@ export const useAuthController = () => {
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [razaoSocial, setRazaoSocial] = useState('');
   const [cnpj, setCnpj] = useState('');
-  const [placaVeiculo, setPlacaVeiculo] = useState(''); // Novo campo para motoboy
+  const [placaVeiculo, setPlacaVeiculo] = useState('');
 
   const handleNomeChange = (texto) => {
     const textoLimpo = texto.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 100);
@@ -72,18 +128,29 @@ export const useAuthController = () => {
 
       } else if (tipoUsuario === 'motoboy') {
         if (!cpf) throw new Error("CPF_VAZIO");
+        if (!validarCPF(cpf)) throw new Error("CPF_INVALIDO");
         if (!placaVeiculo) throw new Error("PLACA_VAZIA");
-        
+
         const id_motoboy = `moto_${numeroAleatorio}`;
-        // Aqui você chamará o método do seu AuthModel para motoboy
-        await AuthModel.registrarMotoboy({ 
-          email, nome, cpf, telefone, placaVeiculo, id_motoboy, tipo: 'motoboy' 
+        await AuthModel.registrarMotoboy({
+          email, nome, cpf, telefone, placaVeiculo, id_motoboy, tipo: 'motoboy'
         });
 
       } else {
         // Consumidor
         if (!cpf) throw new Error("CPF_VAZIO");
+        if (!validarCPF(cpf)) throw new Error("CPF_INVALIDO");
+
         if (!telefone) throw new Error("TELEFONE_VAZIO");
+        const telefoneLimpo = telefone.replace(/\D/g, '');
+        if (telefoneLimpo.length < 10 || telefoneLimpo.length > 11) {
+          throw new Error("TELEFONE_INVALIDO");
+        }
+
+        const resultadoData = validarDataNascimento(dataNascimento);
+        if (resultadoData === 'vazia') throw new Error("DATA_NASCIMENTO_VAZIA");
+        if (resultadoData === 'invalida') throw new Error("DATA_NASCIMENTO_INVALIDA");
+        if (resultadoData === 'futura') throw new Error("DATA_NASCIMENTO_FUTURA");
 
         const qTel = query(collection(db, 'consumidores'), where('telefone', '==', telefone));
         const snapTel = await getDocs(qTel);
@@ -105,7 +172,18 @@ export const useAuthController = () => {
       let mensagemErro = "Ocorreu um erro ao realizar o cadastro.";
       if (error.message === "PLACA_VAZIA") mensagemErro = "Por favor, informe a placa do veículo.";
       else if (error.message === "CPF_VAZIO") mensagemErro = "Por favor, preencha o campo de CPF.";
-      // ... (outros erros que você já tinha)
+      else if (error.message === "CPF_INVALIDO") mensagemErro = "CPF inválido. Verifique os dígitos e tente novamente.";
+      else if (error.message === "TELEFONE_VAZIO") mensagemErro = "Por favor, preencha o campo de telefone.";
+      else if (error.message === "TELEFONE_INVALIDO") mensagemErro = "Telefone inválido. Informe um número com DDD (10 ou 11 dígitos).";
+      else if (error.message === "TELEFONE_JA_CADASTRADO") mensagemErro = "Este telefone já está cadastrado. Tente fazer login.";
+      else if (error.message === "CPF_JA_CADASTRADO") mensagemErro = "Este CPF já está cadastrado. Tente fazer login.";
+      else if (error.message === "CNPJ_JA_CADASTRADO") mensagemErro = "Este CNPJ já está cadastrado. Tente fazer login.";
+      else if (error.message === "CNPJ_VAZIO") mensagemErro = "Por favor, preencha o campo de CNPJ.";
+      else if (error.message === "DATA_NASCIMENTO_VAZIA") mensagemErro = "Por favor, informe sua data de nascimento.";
+      else if (error.message === "DATA_NASCIMENTO_INVALIDA") mensagemErro = "Data de nascimento inválida. Use o formato DD/MM/AAAA.";
+      else if (error.message === "DATA_NASCIMENTO_FUTURA") mensagemErro = "Data de nascimento inválida. A data não pode ser hoje ou no futuro.";
+      else if (error.code === "auth/email-already-in-use") mensagemErro = "Este e-mail já está cadastrado. Tente fazer login.";
+      else if (error.code === "auth/invalid-email") mensagemErro = "E-mail inválido. Verifique e tente novamente.";
       setErro(mensagemErro);
     } finally {
       setCarregando(false);
@@ -115,7 +193,7 @@ export const useAuthController = () => {
   const irParaLogin = () => router.back();
 
   return {
-    tipoUsuario, setTipoUsuario, 
+    tipoUsuario, setTipoUsuario,
     email, setEmail,
     nome, handleNomeChange, cpf, handleCpfChange, telefone, handleTelefoneChange, dataNascimento, setDataNascimento,
     nomeFantasia, setNomeFantasia, razaoSocial, setRazaoSocial, cnpj, handleCnpjChange,
