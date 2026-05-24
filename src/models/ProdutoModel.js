@@ -14,6 +14,7 @@ export const ProdutoModel = {
         calorias: dadosPrato.calorias || 0,
         foto: dadosPrato.foto || "",
         disponivel: true,
+        acompanhamentos: dadosPrato.acompanhamentos || [], // INSERIDO AQUI
       });
       return docRef.id;
     } catch (error) {
@@ -85,6 +86,7 @@ export const ProdutoModel = {
         categoria: dadosAtualizados.categoria || "",
         calorias: dadosAtualizados.calorias || 0,
         foto: dadosAtualizados.foto || "",
+        acompanhamentos: dadosAtualizados.acompanhamentos || [], // INSERIDO AQUI TAMBÉM
       });
     } catch (error) {
       console.error("Erro ao atualizar produto:", error);

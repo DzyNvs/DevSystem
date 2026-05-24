@@ -11,6 +11,23 @@ const gap = 16;
 const paddingHorizontal = 20;
 const cardWidth = (width - (paddingHorizontal * 2) - (gap * 4)) / 5;
 
+// 👉 Função auxiliar para agrupar adicionais iguais e somar suas quantidades e preços
+const agruparAdicionais = (adicionais) => {
+  if (!adicionais) return [];
+  const agrupado = {};
+  
+  adicionais.forEach(add => {
+    if (agrupado[add.nome]) {
+      agrupado[add.nome].qtd += (add.qtd || 1);
+    } else {
+      // Se não tiver a propriedade "qtd" vinda do banco, assumimos 1
+      agrupado[add.nome] = { ...add, qtd: add.qtd || 1 };
+    }
+  });
+  
+  return Object.values(agrupado);
+};
+
 export function PedidosScreen() {
   const ctrl = usePedidosController();
   const router = useRouter();
@@ -20,6 +37,10 @@ export function PedidosScreen() {
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
   const [codigoDigitado, setCodigoDigitado] = useState('');
   const [processando, setProcessando] = useState(false);
+
+  // 👉 Novos estados para o modal de informações
+  const [modalInfoVisivel, setModalInfoVisivel] = useState(false);
+  const [pedidoInfo, setPedidoInfo] = useState(null);
 
   const abas = [
     { id: 'pendente', nome: 'Aguardando' },
@@ -54,8 +75,12 @@ export function PedidosScreen() {
     setModalVisivel(true);
   };
 
+  const abrirModalInfo = (pedido) => {
+    setPedidoInfo(pedido);
+    setModalInfoVisivel(true);
+  };
+
   const confirmarFinalizacao = async () => {
-    // 1. Validação do código com aviso de erro
     if (codigoDigitado.trim() !== pedidoSelecionado.codigo_entrega) {
       return Alert.alert(
         "Código Inválido", 
@@ -65,7 +90,6 @@ export function PedidosScreen() {
 
     setProcessando(true);
     try {
-      // 2. Só muda para 'entregue' se o código acima for válido
       await ctrl.alterarStatus(pedidoSelecionado.id, 'entregue');
 
       try {
@@ -102,9 +126,15 @@ export function PedidosScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.idPedido}>Pedido #{item.id?.substring(0, 6).toUpperCase()}</Text>
           <View style={styles.headerAcoes}>
+            
+            <TouchableOpacity style={styles.btnInfo} onPress={() => abrirModalInfo(item)}>
+              <Ionicons name="information-circle-outline" size={22} color="#1565C0" />
+            </TouchableOpacity>
+
             <View style={[styles.badgeStatus, { backgroundColor: statusFormatado.fundo }]}>
               <Text style={[styles.textoStatus, { color: statusFormatado.cor }]}>{statusFormatado.texto}</Text>
             </View>
+            
             {item.status !== 'entregue' && item.status !== 'recusado' && (
               <TouchableOpacity style={styles.btnTresPontos} onPress={() => abrirModalFinalizar(item)}>
                 <Ionicons name="ellipsis-vertical" size={20} color="#555" />
@@ -123,13 +153,28 @@ export function PedidosScreen() {
         <View style={styles.comandaContainer}>
           <Text style={styles.comandaTitulo}>COMANDA DE ITENS</Text>
           <View style={styles.comandaDivisor} />
+          
           {item.itens?.map((produto, index) => (
-            <View key={index} style={styles.comandaItem}>
-              <Text style={styles.comandaItemQtd}>{produto.qtd}x</Text>
-              <Text style={styles.comandaItemNome}>{produto.nome}</Text>
-              <Text style={styles.comandaItemPreco}>
-                R$ {(produto.preco * produto.qtd).toFixed(2).replace('.', ',')}
-              </Text>
+            <View key={index} style={styles.comandaItemWrapper}>
+              <View style={styles.comandaItem}>
+                <Text style={styles.comandaItemQtd}>{produto.qtd}x</Text>
+                <Text style={styles.comandaItemNome}>{produto.nome}</Text>
+                <Text style={styles.comandaItemPreco}>
+                  R$ {(produto.preco * produto.qtd).toFixed(2).replace('.', ',')}
+                </Text>
+              </View>
+              
+              {/* 👉 Renderização de adicionais agrupados corrigida */}
+              {produto.adicionais && produto.adicionais.length > 0 && agruparAdicionais(produto.adicionais).map((add, idx) => (
+                <View key={`add-${idx}`} style={styles.comandaItemAdicional}>
+                  <Text style={styles.comandaAdicionalNome}>
+                    + {add.qtd > 1 ? `${add.qtd}x ` : ''}{add.nome}
+                  </Text>
+                  <Text style={styles.comandaAdicionalPreco}>
+                    + R$ {(Number(add.preco) * add.qtd).toFixed(2).replace('.', ',')}
+                  </Text>
+                </View>
+              ))}
             </View>
           ))}
         </View>
@@ -163,7 +208,6 @@ export function PedidosScreen() {
             </TouchableOpacity>
           )}
 
-          {/* 👉 MODIFICAÇÃO AQUI: Agora ele abre o modal em vez de finalizar direto */}
           {item.status === 'saiu_entrega' && (
             <TouchableOpacity 
               style={[styles.btnAcao, styles.btnPadrao]} 
@@ -217,6 +261,7 @@ export function PedidosScreen() {
         )}
       </View>
 
+      {/* Modal de Finalização do Pedido (Código PIN) */}
       <Modal visible={modalVisivel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -237,7 +282,6 @@ export function PedidosScreen() {
             />
 
             <View style={styles.modalBotoes}>
-              {/* Opção de voltar/cancelar */}
               <TouchableOpacity 
                 style={styles.btnModalCancel} 
                 onPress={() => setModalVisivel(false)}
@@ -261,6 +305,85 @@ export function PedidosScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Informações Complementares do Cliente */}
+      <Modal visible={modalInfoVisivel} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentInfo}>
+            <View style={styles.modalInfoHeader}>
+              <Text style={styles.modalTituloInfo}>Detalhes do Cliente</Text>
+              <TouchableOpacity onPress={() => setModalInfoVisivel(false)} style={styles.btnFecharModal}>
+                <Ionicons name="close" size={24} color="#555" />
+              </TouchableOpacity>
+            </View>
+
+            {pedidoInfo && (
+              <ScrollView style={styles.scrollInfo} showsVerticalScrollIndicator={false}>
+                
+                <View style={styles.infoRow}>
+                  <Ionicons name="person" size={18} color="#777" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Cliente</Text>
+                    <Text style={styles.infoTexto}>{pedidoInfo.nome_cliente || "Não informado"}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Ionicons name="location" size={18} color="#777" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Endereço de Entrega</Text>
+                    {pedidoInfo.endereco_entrega ? (
+                      <Text style={styles.infoTexto}>
+                        {pedidoInfo.endereco_entrega.rua}, {pedidoInfo.endereco_entrega.numero}
+                        {pedidoInfo.endereco_entrega.complemento ? ` - ${pedidoInfo.endereco_entrega.complemento}` : ''}
+                        {'\n'}{pedidoInfo.endereco_entrega.bairro} - {pedidoInfo.endereco_entrega.cidade}
+                        {'\n'}CEP: {pedidoInfo.endereco_entrega.cep}
+                      </Text>
+                    ) : (
+                      <Text style={styles.infoTexto}>Retirada no local</Text>
+                    )}
+                  </View>
+                </View>
+
+                {pedidoInfo.observacao ? (
+                  <View style={styles.infoRow}>
+                    <Ionicons name="chatbox-ellipses" size={18} color="#777" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Observação</Text>
+                      <Text style={styles.infoTexto}>{pedidoInfo.observacao}</Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                <View style={styles.infoRow}>
+                  <Ionicons name="cash" size={18} color="#777" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Forma de Pagamento</Text>
+                    <Text style={styles.infoTexto}>{pedidoInfo.forma_pagamento?.toUpperCase()}</Text>
+                  </View>
+                </View>
+
+                {pedidoInfo.forma_pagamento === 'dinheiro' && pedidoInfo.troco > 0 && (
+                  <View style={styles.trocoContainer}>
+                    <Ionicons name="alert-circle" size={24} color="#D32F2F" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={[styles.infoLabel, { color: '#D32F2F' }]}>Atenção: Troco Necessário</Text>
+                      <Text style={styles.infoTexto}>
+                        Cliente vai pagar com: <Text style={{ fontWeight: 'bold' }}>R$ {pedidoInfo.valor_entregue_dinheiro?.toFixed(2).replace('.', ',')}</Text>
+                      </Text>
+                      <Text style={styles.textoTrocoDestaque}>
+                        Enviar Troco: R$ {pedidoInfo.troco?.toFixed(2).replace('.', ',')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -280,7 +403,8 @@ const styles = StyleSheet.create({
   columnWrapper: { justifyContent: 'flex-start', gap: gap },
   cardPedido: { width: cardWidth, backgroundColor: '#FFF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EAEAEA', marginBottom: 16 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  headerAcoes: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerAcoes: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  btnInfo: { padding: 4 },
   btnTresPontos: { padding: 4 },
   idPedido: { fontSize: 13, fontWeight: 'bold', color: '#111' },
   badgeStatus: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
@@ -290,10 +414,17 @@ const styles = StyleSheet.create({
   comandaContainer: { backgroundColor: '#F8F9FA', borderRadius: 8, padding: 8, marginVertical: 10, minHeight: 90 },
   comandaTitulo: { fontSize: 10, fontWeight: 'bold', color: '#777', textAlign: 'center', letterSpacing: 1 },
   comandaDivisor: { height: 1, backgroundColor: '#EAEAEA', marginVertical: 6 },
-  comandaItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  
+  // Estilos da Comanda e Adicionais
+  comandaItemWrapper: { marginBottom: 6 },
+  comandaItem: { flexDirection: 'row', alignItems: 'flex-start' },
   comandaItemQtd: { fontSize: 12, fontWeight: 'bold', color: '#333', width: 22 },
-  comandaItemNome: { flex: 1, fontSize: 12, color: '#444', paddingRight: 5 },
+  comandaItemNome: { flex: 1, fontSize: 12, color: '#444', paddingRight: 5, fontWeight: '600' },
   comandaItemPreco: { fontSize: 12, fontWeight: '500', color: '#333' },
+  comandaItemAdicional: { flexDirection: 'row', paddingLeft: 22, marginTop: 2 },
+  comandaAdicionalNome: { flex: 1, fontSize: 11, color: '#777', fontStyle: 'italic' },
+  comandaAdicionalPreco: { fontSize: 11, color: '#777' },
+
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EAEAEA' },
   textoTotal: { fontSize: 15, fontWeight: 'bold', color: '#2e7d32' },
   textoVazio: { textAlign: 'center', marginTop: 50, color: '#777', fontSize: 16 },
@@ -302,6 +433,8 @@ const styles = StyleSheet.create({
   btnRecusar: { backgroundColor: '#D32F2F' }, 
   btnPadrao: { backgroundColor: '#93BD57' },
   txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 11 },
+  
+  // Modais Base
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxWidth: 350, backgroundColor: '#FFF', padding: 24, borderRadius: 16, alignItems: 'center', elevation: 5 },
   modalTitulo: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 8 },
@@ -311,5 +444,18 @@ const styles = StyleSheet.create({
   btnModalCancel: { flex: 1, paddingVertical: 14, backgroundColor: '#E0E0E0', borderRadius: 8, alignItems: 'center' },
   btnModalConfirm: { flex: 1, paddingVertical: 14, backgroundColor: '#2E7D32', borderRadius: 8, alignItems: 'center' },
   txtBtnModal: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  txtBtnModalColor: { color: '#333', fontSize: 16, fontWeight: 'bold' }
+  txtBtnModalColor: { color: '#333', fontSize: 16, fontWeight: 'bold' },
+
+  // Estilos do Modal de Informações
+  modalContentInfo: { width: '100%', maxWidth: 450, backgroundColor: '#FFF', padding: 20, borderRadius: 16, elevation: 5, maxHeight: '80%' },
+  modalInfoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#EAEAEA', paddingBottom: 15, marginBottom: 15 },
+  modalTituloInfo: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  btnFecharModal: { padding: 4 },
+  scrollInfo: { width: '100%' },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 15, gap: 12 },
+  infoTextContainer: { flex: 1 },
+  infoLabel: { fontSize: 12, color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 2 },
+  infoTexto: { fontSize: 15, color: '#333', lineHeight: 22 },
+  trocoContainer: { flexDirection: 'row', backgroundColor: '#FFEBEE', padding: 15, borderRadius: 8, alignItems: 'center', gap: 12, marginTop: 5 },
+  textoTrocoDestaque: { fontSize: 18, fontWeight: 'bold', color: '#D32F2F', marginTop: 5 }
 });

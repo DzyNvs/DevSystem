@@ -26,6 +26,9 @@ export const useEditarPratoController = () => {
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(true);
 
+  // NOVO ESTADO: Array de acompanhamentos
+  const [acompanhamentos, setAcompanhamentos] = useState([]);
+
   useEffect(() => {
     if (idProduto) {
       carregarPrato();
@@ -46,6 +49,17 @@ export const useEditarPratoController = () => {
           setImagemUri(prato.foto);
           setImagemOriginal(prato.foto);
         }
+        
+        // Carrega os acompanhamentos do banco, se existirem
+        if (prato.acompanhamentos && Array.isArray(prato.acompanhamentos)) {
+          const acompanhamentosFormatados = prato.acompanhamentos.map(a => ({
+            nome: a.nome,
+            preco: a.preco ? a.preco.toString().replace('.', ',') : ''
+          }));
+          setAcompanhamentos(acompanhamentosFormatados);
+        } else {
+          setAcompanhamentos([]);
+        }
       }
     } catch (error) {
       alert("Erro ao carregar dados do prato.");
@@ -56,6 +70,22 @@ export const useEditarPratoController = () => {
 
   const selecionarTag = (tag) => {
     setCategoria(prev => prev === tag ? '' : tag);
+  };
+
+  // FUNÇÕES DOS ACOMPANHAMENTOS
+  const adicionarAcompanhamento = () => {
+    setAcompanhamentos([...acompanhamentos, { nome: '', preco: '' }]);
+  };
+
+  const atualizarAcompanhamento = (index, campo, valor) => {
+    const novaLista = [...acompanhamentos];
+    novaLista[index][campo] = valor;
+    setAcompanhamentos(novaLista);
+  };
+
+  const removerAcompanhamento = (index) => {
+    const novaLista = acompanhamentos.filter((_, i) => i !== index);
+    setAcompanhamentos(novaLista);
   };
 
   const escolherImagem = async () => {
@@ -99,6 +129,14 @@ export const useEditarPratoController = () => {
         fotoUrl = urlNova;
       }
 
+      // Prepara os acompanhamentos ignorando os que não têm nome digitado
+      const acompanhamentosFormatados = acompanhamentos
+        .filter(item => item.nome.trim() !== '')
+        .map(item => ({
+          nome: item.nome.trim(),
+          preco: item.preco ? parseFloat(item.preco.replace(',', '.')) : 0
+        }));
+
       const pratoAtualizado = {
         nome,
         descricao,
@@ -106,6 +144,7 @@ export const useEditarPratoController = () => {
         categoria,
         calorias: parseInt(calorias) || 0,
         foto: fotoUrl,
+        acompanhamentos: acompanhamentosFormatados, // Envia o array atualizado
       };
 
       await ProdutoModel.atualizar(idProduto, pratoAtualizado);
@@ -123,6 +162,7 @@ export const useEditarPratoController = () => {
     nome, setNome, descricao, setDescricao, preco, setPreco,
     categoria, calorias, setCalorias,
     imagemUri, escolherImagem, salvando, carregando, atualizarPrato,
-    TAGS, selecionarTag, voltar: () => router.back()
+    TAGS, selecionarTag, voltar: () => router.back(),
+    acompanhamentos, adicionarAcompanhamento, atualizarAcompanhamento, removerAcompanhamento
   };
 };

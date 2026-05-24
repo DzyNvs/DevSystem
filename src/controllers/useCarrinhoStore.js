@@ -18,25 +18,43 @@ export const useCarrinhoStore = create(
       fecharDrawer: () => set({ drawerAberto: false }),
 
       // ── Carrinho ─────────────────────────────────────────────────────────
-      adicionarItem: (produto, idRestaurante, quantidade = 1) =>
+      // 👉 ATUALIZADO: Agora recebe os adicionais e gera um ID único
+      adicionarItem: (produto, idRestaurante, quantidade = 1, adicionais = []) =>
         set((state) => {
+          // Cria uma string única para identificar a combinação exata de prato + adicionais
+          const idsAdicionais = adicionais.map((a) => a.id).sort().join("-");
+          
+          // Preserva o ID original do prato no banco
+          const produtoOriginalId = produto.produtoId || produto.id;
+          
+          // ID final do item no carrinho: "pratoID-adc1-adc2..."
+          const cartItemId = idsAdicionais 
+            ? `${produtoOriginalId}-${idsAdicionais}` 
+            : produtoOriginalId;
+
           // Se for de outro restaurante, limpa e adiciona o novo com a quantidade escolhida
           if (state.restauranteId && state.restauranteId !== idRestaurante) {
             return {
-              itens: [{ ...produto, qtd: quantidade }],
+              itens: [{ 
+                ...produto, 
+                id: cartItemId, 
+                produtoId: produtoOriginalId, 
+                qtd: quantidade, 
+                adicionais 
+              }],
               restauranteId: idRestaurante,
             };
           }
 
           const itemExistente = state.itens.find(
-            (item) => item.id === produto.id,
+            (item) => item.id === cartItemId,
           );
 
-          // Se o item já está no carrinho, soma a quantidade atual com a quantidade nova
+          // Se o item (com a mesma configuração de adicionais) já está no carrinho, soma a quantidade
           if (itemExistente) {
             return {
               itens: state.itens.map((item) =>
-                item.id === produto.id
+                item.id === cartItemId
                   ? { ...item, qtd: item.qtd + quantidade }
                   : item,
               ),
@@ -44,27 +62,36 @@ export const useCarrinhoStore = create(
             };
           }
 
-          // Se o item não está no carrinho, adiciona com a quantidade escolhida
+          // Se o item não está no carrinho, adiciona
           return {
-            itens: [...state.itens, { ...produto, qtd: quantidade }],
+            itens: [
+              ...state.itens, 
+              { 
+                ...produto, 
+                id: cartItemId, 
+                produtoId: produtoOriginalId, 
+                qtd: quantidade, 
+                adicionais 
+              }
+            ],
             restauranteId: idRestaurante,
           };
         }),
 
-      removerItem: (produtoId) =>
+      removerItem: (cartItemId) =>
         set((state) => {
           const itemExistente = state.itens.find(
-            (item) => item.id === produtoId,
+            (item) => item.id === cartItemId,
           );
           if (itemExistente?.qtd > 1) {
             return {
               itens: state.itens.map((item) =>
-                item.id === produtoId ? { ...item, qtd: item.qtd - 1 } : item,
+                item.id === cartItemId ? { ...item, qtd: item.qtd - 1 } : item,
               ),
             };
           }
           const novosItens = state.itens.filter(
-            (item) => item.id !== produtoId,
+            (item) => item.id !== cartItemId,
           );
           return {
             itens: novosItens,
@@ -74,9 +101,13 @@ export const useCarrinhoStore = create(
 
       limparCarrinho: () => set({ itens: [], restauranteId: null }),
 
+      // Atualizamos para considerar os adicionais, caso esse método seja chamado externamente
       calcularTotal: () => {
         const { itens } = get();
-        return itens.reduce((total, item) => total + item.preco * item.qtd, 0);
+        return itens.reduce((total, item) => {
+          const valorAds = item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
+          return total + (Number(item.preco) + valorAds) * item.qtd;
+        }, 0);
       },
     }),
     {

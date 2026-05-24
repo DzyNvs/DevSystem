@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore'; 
+import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native'; 
+import { Platform } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { useCarrinhoStore } from './useCarrinhoStore';
 
@@ -18,7 +18,16 @@ export const useHeaderConsumidorController = () => {
   const abrirDrawer = useCarrinhoStore((state) => state.abrirDrawer);
 
   const totalItens = itens.reduce((acc, item) => acc + item.qtd, 0);
-  const valorTotal = itens.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
+  
+  // 👉 CORREÇÃO: Calculando o valor total incluindo os adicionais
+  const valorTotal = itens.reduce((acc, item) => {
+    const totalAdicionais = item.adicionais && Array.isArray(item.adicionais)
+      ? item.adicionais.reduce((somaAdd, add) => somaAdd + (Number(add.preco) || 0), 0)
+      : 0;
+
+    const precoFinalItem = Number(item.preco) + totalAdicionais;
+    return acc + (precoFinalItem * item.qtd);
+  }, 0);
 
   useEffect(() => {
     let unsubscribePedidos = () => {};

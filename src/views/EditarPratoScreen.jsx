@@ -91,6 +91,50 @@ export function EditarPratoScreen() {
                   );
                 })}
               </View>
+
+              {/* LINHA DIVISÓRIA PARA OS ACOMPANHAMENTOS */}
+              <View style={styles.divisor} />
+
+              <Text style={styles.label}>Acompanhamentos / Adicionais</Text>
+              <Text style={styles.tagHelper}>
+                Ofereça opções extras (Ex: Batata frita, Molho adicional, Borda recheada).
+              </Text>
+
+              {ctrl.acompanhamentos.map((acomp, index) => (
+                <View key={index} style={styles.acompRow}>
+                  <View style={{ flex: 2 }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nome do opcional"
+                      placeholderTextColor="#999"
+                      value={acomp.nome}
+                      onChangeText={(txt) => ctrl.atualizarAcompanhamento(index, 'nome', txt)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="R$ +0,00"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      value={acomp.preco}
+                      onChangeText={(txt) => ctrl.atualizarAcompanhamento(index, 'preco', txt)}
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.btnRemoverAcomp} 
+                    onPress={() => ctrl.removerAcompanhamento(index)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#E53935" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <TouchableOpacity style={styles.btnAddAcomp} onPress={ctrl.adicionarAcompanhamento}>
+                <Ionicons name="add-circle-outline" size={20} color="#93BD57" />
+                <Text style={styles.btnAddAcompTexto}>Adicionar Opcional</Text>
+              </TouchableOpacity>
+
             </View>
 
             {/* Botão Atualizar */}
@@ -197,6 +241,30 @@ const styles = StyleSheet.create({
   tagChipSelecionado: { backgroundColor: '#93BD57', borderColor: '#93BD57' },
   tagTexto: { color: '#666', fontSize: 13, fontWeight: '500' },
   tagTextoSelecionado: { color: '#FFF' },
+
+  // NOVOS ESTILOS - ACOMPANHAMENTOS
+  divisor: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 20 },
+  acompRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
+  btnRemoverAcomp: { 
+    padding: 10, 
+    backgroundColor: "#FFEBEE", 
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFCDD2"
+  },
+  btnAddAcomp: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#93BD57",
+    borderStyle: "dashed",
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: "#F1F8E9"
+  },
+  btnAddAcompTexto: { color: "#93BD57", fontWeight: "bold", marginLeft: 6 },
 
   btnSalvar: {
     backgroundColor: '#93BD57',

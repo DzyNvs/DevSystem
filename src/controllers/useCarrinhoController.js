@@ -7,7 +7,7 @@ export const useCarrinhoController = () => {
   // Puxa tudo que precisamos do Zustand
   const {
     itens,
-    idRestauranteAtual,
+    restauranteId,
     adicionarItem,
     removerItem,
     limparCarrinho,
@@ -16,23 +16,25 @@ export const useCarrinhoController = () => {
   const [restaurante, setRestaurante] = useState(null);
   const [carregando, setCarregando] = useState(false);
 
-  // Toda vez que o id do restaurante mudar (ou seja, quando o carrinho for criado), busca a taxa de entrega
+  // Toda vez que o id do restaurante mudar, busca os dados da loja
   useEffect(() => {
-    if (idRestauranteAtual) {
+    if (restauranteId) {
       carregarRestaurante();
     } else {
       setRestaurante(null);
     }
-  }, [idRestauranteAtual]);
+  }, [restauranteId]);
 
   const carregarRestaurante = async () => {
     setCarregando(true);
     try {
-      const dados = await RestauranteModel.buscarPorId(idRestauranteAtual);
+      const dados = await RestauranteModel.buscarPorId(restauranteId);
       if (dados) {
         setRestaurante({
+          id: restauranteId,
           nome: dados.nome_fantasia || dados.razao_social || "Restaurante",
-          taxaEntrega: dados.taxa_entrega || 5.0, // Padrão R$ 5,00 se o restaurante não tiver cadastrado
+          taxaEntrega: dados.taxa_entrega || 5.0, 
+          pedidoMinimo: Number(dados.pedido_minimo || 0),
         });
       }
     } catch (error) {
@@ -42,10 +44,14 @@ export const useCarrinhoController = () => {
     }
   };
 
-  // Cálculos financeiros e nutricionais
-  const subtotal = itens.reduce((acc, item) => acc + item.preco * item.qtd, 0);
+  // 👉 ATUALIZADO: Cálculo financeiro somando o prato + os adicionais
+  const subtotal = itens.reduce((acc, item) => {
+    const valorAdicionais = item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
+    const valorUnitarioFinal = Number(item.preco) + valorAdicionais;
+    return acc + (valorUnitarioFinal * item.qtd);
+  }, 0);
 
-  // 👉 NOVO: Cálculo do total de calorias da sacola
+  // Cálculo do total de calorias da sacola
   const totalCalorias = itens.reduce(
     (acc, item) => acc + (Number(item.calorias) || 0) * item.qtd,
     0,
@@ -59,7 +65,6 @@ export const useCarrinhoController = () => {
       alert("Sua sacola está vazia!");
       return;
     }
-    // A rota que vamos criar no próximo passo!
     router.push("/consumidor/pagamento");
   };
 
@@ -68,7 +73,7 @@ export const useCarrinhoController = () => {
     restaurante,
     carregando,
     subtotal,
-    totalCalorias, // 👉 Exportando as calorias para a View
+    totalCalorias, 
     taxaEntrega,
     totalFinal,
     adicionarItem,

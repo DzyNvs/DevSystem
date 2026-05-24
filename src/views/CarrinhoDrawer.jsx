@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 import { useCarrinhoStore } from "../controllers/useCarrinhoStore";
-import { RestauranteModel } from "../models/RestauranteModel"; // ⚠️ Verifique se o caminho do model está correto
+import { RestauranteModel } from "../models/RestauranteModel";
 
 export function CarrinhoDrawer() {
   const router = useRouter();
@@ -27,10 +27,8 @@ export function CarrinhoDrawer() {
     limparCarrinho,
   } = useCarrinhoStore();
 
-  // 👉 NOVO: Estado para armazenar o valor do pedido mínimo
   const [pedidoMinimo, setPedidoMinimo] = useState(0);
 
-  // 👉 NOVO: Busca o pedido mínimo no banco toda vez que abrir a gaveta com um restaurante vinculado
   useEffect(() => {
     if (drawerAberto && restauranteId) {
       RestauranteModel.buscarPorId(restauranteId)
@@ -43,19 +41,17 @@ export function CarrinhoDrawer() {
     }
   }, [drawerAberto, restauranteId]);
 
-  // O React recalcula isso automaticamente sempre que a quantidade de itens muda
-  const valorTotal = itens.reduce(
-    (acc, item) => acc + item.preco * item.qtd,
-    0,
-  );
+  // Soma do prato + adicionais para garantir o valor correto no Drawer
+  const valorTotal = itens.reduce((acc, item) => {
+    const valorAdicionais = item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
+    return acc + (Number(item.preco) + valorAdicionais) * item.qtd;
+  }, 0);
 
-  // Cálculo de Calorias
   const totalCalorias = itens.reduce(
     (acc, item) => acc + (Number(item.calorias) || 0) * item.qtd,
     0,
   );
 
-  // 👉 NOVO: Lógica para bloquear o botão se estiver abaixo do mínimo
   const isAbaixoMinimo = valorTotal > 0 && valorTotal < pedidoMinimo;
   const faltaParaMinimo = pedidoMinimo - valorTotal;
 
@@ -67,7 +63,6 @@ export function CarrinhoDrawer() {
   return (
     <Modal visible={drawerAberto} transparent animationType="fade">
       <View style={styles.overlay}>
-        {/* Fundo escuro clicável */}
         <TouchableOpacity
           style={styles.backdrop}
           onPress={fecharDrawer}
@@ -77,9 +72,7 @@ export function CarrinhoDrawer() {
         <View style={styles.drawer}>
           <View style={styles.header}>
             <Text style={styles.title}>Seu Pedido</Text>
-
             <View style={styles.headerAcoes}>
-              {/* Botão de limpar o carrinho (só aparece se tiver itens) */}
               {itens.length > 0 && (
                 <TouchableOpacity onPress={limparCarrinho}>
                   <Text style={styles.btnLimpar}>Limpar</Text>
@@ -100,61 +93,76 @@ export function CarrinhoDrawer() {
                 </Text>
               </View>
             ) : (
-              itens.map((item) => (
-                <View key={item.id} style={styles.itemCard}>
-                  {/* Foto do produto puxando do Firebase, com um placeholder caso falhe */}
-                  <Image
-                    source={{
-                      uri: item.foto || "https://via.placeholder.com/60",
-                    }}
-                    style={styles.itemFoto}
-                  />
+              itens.map((item) => {
+                // Cálculo unitário para exibir na tela (base + extras)
+                const valorAdicionais = item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
+                const precoUnitarioTotal = Number(item.preco) + valorAdicionais;
 
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemNome} numberOfLines={2}>
-                      {item.nome}
-                    </Text>
-                    <Text style={styles.itemPrecoUnit}>
-                      R$ {Number(item.preco).toFixed(2).replace(".", ",")} / un
-                    </Text>
-                  </View>
+                return (
+                  <View key={item.id} style={styles.itemCard}>
+                    <Image
+                      source={{
+                        uri: item.foto || "https://via.placeholder.com/60",
+                      }}
+                      style={styles.itemFoto}
+                    />
 
-                  <View style={styles.itemRight}>
-                    {/* Controles de Quantidade (+ e -) */}
-                    <View style={styles.controleQtd}>
-                      <TouchableOpacity
-                        style={styles.btnQtd}
-                        onPress={() => removerItem(item.id)}
-                      >
-                        {/* Se a qtd for 1, mostra lixeirinha. Se for maior, mostra um "menos" */}
-                        <Ionicons
-                          name={item.qtd === 1 ? "trash-outline" : "remove"}
-                          size={16}
-                          color={item.qtd === 1 ? "#E53935" : "#666"}
-                        />
-                      </TouchableOpacity>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemNome} numberOfLines={2}>
+                        {item.nome}
+                      </Text>
+                      
+                      {/* Renderização dos Adicionais escolhidos */}
+                      {item.adicionais && item.adicionais.length > 0 && (
+                        <View style={styles.adicionaisContainer}>
+                          {item.adicionais.map((adc, idx) => (
+                            <Text key={adc.id || idx} style={styles.adicionalText}>
+                              + {adc.nome} (+ R$ {Number(adc.preco).toFixed(2).replace(".", ",")})
+                            </Text>
+                          ))}
+                        </View>
+                      )}
 
-                      <Text style={styles.txtQtd}>{item.qtd}</Text>
-
-                      <TouchableOpacity
-                        style={styles.btnQtd}
-                        onPress={() => adicionarItem(item, restauranteId)}
-                      >
-                        <Ionicons name="add" size={16} color="#93BD57" />
-                      </TouchableOpacity>
+                      <Text style={styles.itemPrecoUnit}>
+                        R$ {precoUnitarioTotal.toFixed(2).replace(".", ",")} / un
+                      </Text>
                     </View>
 
-                    <Text style={styles.itemPrecoTotal}>
-                      R$ {(item.preco * item.qtd).toFixed(2).replace(".", ",")}
-                    </Text>
+                    <View style={styles.itemRight}>
+                      <View style={styles.controleQtd}>
+                        <TouchableOpacity
+                          style={styles.btnQtd}
+                          onPress={() => removerItem(item.id)}
+                        >
+                          <Ionicons
+                            name={item.qtd === 1 ? "trash-outline" : "remove"}
+                            size={16}
+                            color={item.qtd === 1 ? "#E53935" : "#666"}
+                          />
+                        </TouchableOpacity>
+
+                        <Text style={styles.txtQtd}>{item.qtd}</Text>
+
+                        <TouchableOpacity
+                          style={styles.btnQtd}
+                          // Passamos o array de adicionais para o Zustand manter a coerência da chave
+                          onPress={() => adicionarItem(item, restauranteId, 1, item.adicionais)}
+                        >
+                          <Ionicons name="add" size={16} color="#93BD57" />
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.itemPrecoTotal}>
+                        R$ {(precoUnitarioTotal * item.qtd).toFixed(2).replace(".", ",")}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))
+                );
+              })
             )}
           </ScrollView>
 
           <View style={styles.footer}>
-            {/* Mostra as calorias no rodapé se for maior que zero */}
             {totalCalorias > 0 && (
               <View style={styles.caloriasRow}>
                 <View style={styles.caloriasLabelContainer}>
@@ -172,7 +180,6 @@ export function CarrinhoDrawer() {
               </Text>
             </View>
 
-            {/* 👉 NOVO: Aviso visual de falta de valor para o pedido mínimo */}
             {isAbaixoMinimo && (
               <View style={styles.avisoMinimoContainer}>
                 <Ionicons name="alert-circle" size={16} color="#D32F2F" />
@@ -186,7 +193,6 @@ export function CarrinhoDrawer() {
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
-                /* O botão fica inativo se estiver vazio OU abaixo do mínimo */
                 (itens.length === 0 || isAbaixoMinimo) &&
                   styles.btnFinalizarInativo,
               ]}
@@ -203,15 +209,8 @@ export function CarrinhoDrawer() {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "transparent",
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  },
+  overlay: { flex: 1, flexDirection: "row", backgroundColor: "transparent" },
+  backdrop: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.4)" },
   drawer: {
     width: "100%",
     maxWidth: 420,
@@ -231,31 +230,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#EFEFEF",
   },
-  title: {
-    fontFamily: "Nunito",
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-  },
+  title: { fontFamily: "Nunito", fontSize: 20, fontWeight: "bold", color: "#333" },
   headerAcoes: { flexDirection: "row", alignItems: "center", gap: 15 },
-  btnLimpar: {
-    fontFamily: "Nunito",
-    fontSize: 14,
-    color: "#E53935",
-    fontWeight: "600",
-  },
+  btnLimpar: { fontFamily: "Nunito", fontSize: 14, color: "#E53935", fontWeight: "600" },
   lista: { flex: 1, padding: 20 },
-  carrinhoVazio: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 40,
-  },
-  carrinhoVazioText: {
-    fontFamily: "Nunito",
-    fontSize: 16,
-    color: "#999",
-    marginTop: 10,
-  },
+  carrinhoVazio: { alignItems: "center", justifyContent: "center", marginTop: 40 },
+  carrinhoVazioText: { fontFamily: "Nunito", fontSize: 16, color: "#999", marginTop: 10 },
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -264,21 +244,14 @@ const styles = StyleSheet.create({
     borderColor: "#F0F0F0",
     gap: 12,
   },
-  itemFoto: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: "#F5F5F5",
-  },
+  itemFoto: { width: 50, height: 50, borderRadius: 8, backgroundColor: "#F5F5F5" },
   itemInfo: { flex: 1 },
-  itemNome: {
-    fontFamily: "Nunito",
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  itemPrecoUnit: { fontFamily: "Nunito", fontSize: 12, color: "#777" },
+  itemNome: { fontFamily: "Nunito", fontSize: 15, color: "#333", fontWeight: "600", marginBottom: 2 },
+  
+  adicionaisContainer: { marginBottom: 4 },
+  adicionalText: { fontFamily: "Nunito", fontSize: 11, color: "#888", fontStyle: "italic" },
+  
+  itemPrecoUnit: { fontFamily: "Nunito", fontSize: 12, color: "#777", marginTop: 2 },
   itemRight: { alignItems: "flex-end", gap: 8 },
   controleQtd: {
     flexDirection: "row",
@@ -290,89 +263,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   btnQtd: { padding: 4 },
-  txtQtd: {
-    fontFamily: "Nunito",
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-    marginHorizontal: 8,
-    minWidth: 16,
-    textAlign: "center",
-  },
-  itemPrecoTotal: {
-    fontFamily: "Nunito",
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#005F02",
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderColor: "#EFEFEF",
-    backgroundColor: "#FAFAFA",
-  },
-
-  caloriasRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  caloriasLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  txtQtd: { fontFamily: "Nunito", fontSize: 14, fontWeight: "bold", color: "#333", marginHorizontal: 8, minWidth: 16, textAlign: "center" },
+  itemPrecoTotal: { fontFamily: "Nunito", fontSize: 16, fontWeight: "bold", color: "#005F02" },
+  footer: { padding: 20, borderTopWidth: 1, borderColor: "#EFEFEF", backgroundColor: "#FAFAFA" },
+  caloriasRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  caloriasLabelContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
   caloriasLabel: { fontFamily: "Nunito", fontSize: 16, color: "#666" },
-  caloriasValue: {
-    fontFamily: "Nunito",
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FF9800",
-  },
-
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
+  caloriasValue: { fontFamily: "Nunito", fontSize: 18, fontWeight: "bold", color: "#FF9800" },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   totalLabel: { fontFamily: "Nunito", fontSize: 18, color: "#666" },
-  totalValue: {
-    fontFamily: "Nunito",
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#005F02",
-  },
-  btnFinalizar: {
-    backgroundColor: "#93BD57",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
+  totalValue: { fontFamily: "Nunito", fontSize: 24, fontWeight: "bold", color: "#005F02" },
+  btnFinalizar: { backgroundColor: "#93BD57", padding: 15, borderRadius: 8, alignItems: "center" },
   btnFinalizarInativo: { backgroundColor: "#CCC" },
-  btnFinalizarText: {
-    fontFamily: "Nunito",
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFF",
-  },
-
-  // 👉 NOVOS ESTILOS DO AVISO:
-  avisoMinimoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFEBEE",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  avisoMinimoTexto: {
-    fontFamily: "Nunito",
-    color: "#D32F2F",
-    fontWeight: "bold",
-    fontSize: 13,
-    flex: 1,
-  },
+  btnFinalizarText: { fontFamily: "Nunito", fontSize: 18, fontWeight: "bold", color: "#FFF" },
+  avisoMinimoContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFEBEE", padding: 10, borderRadius: 8, marginBottom: 12, gap: 8 },
+  avisoMinimoTexto: { fontFamily: "Nunito", color: "#D32F2F", fontWeight: "bold", fontSize: 13, flex: 1 },
 });

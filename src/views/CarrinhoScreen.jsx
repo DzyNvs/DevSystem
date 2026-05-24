@@ -60,50 +60,69 @@ export function CarrinhoScreen() {
 
             {/* Lista de Itens no Carrinho */}
             <View style={styles.listaItens}>
-              {ctrl.itens.map((item) => (
-                <View key={item.id} style={styles.itemCard}>
-                  {item.foto ? (
-                    <Image
-                      source={{ uri: item.foto }}
-                      style={styles.itemFoto}
-                    />
-                  ) : (
-                    <View style={styles.itemFotoPlaceholder} />
-                  )}
+              {ctrl.itens.map((item) => {
+                // Cálculo unitário garantindo soma dos adicionais
+                const valorAdicionais = item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
+                const precoUnitarioTotal = Number(item.preco) + valorAdicionais;
 
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemNome} numberOfLines={1}>
-                      {item.nome}
-                    </Text>
-                    <Text style={styles.itemPreco}>
-                      R$ {(item.preco * item.qtd).toFixed(2).replace(".", ",")}
-                    </Text>
-                  </View>
-
-                  {/* Controles de Quantidade */}
-                  <View style={styles.qtdContainer}>
-                    <TouchableOpacity
-                      style={styles.qtdBtn}
-                      onPress={() => ctrl.removerItem(item.id)}
-                    >
-                      <Ionicons
-                        name={item.qtd === 1 ? "trash-outline" : "remove"}
-                        size={18}
-                        color="#E53935"
+                return (
+                  <View key={item.id} style={styles.itemCard}>
+                    {item.foto ? (
+                      <Image
+                        source={{ uri: item.foto }}
+                        style={styles.itemFoto}
                       />
-                    </TouchableOpacity>
-                    <Text style={styles.qtdText}>{item.qtd}</Text>
-                    <TouchableOpacity
-                      style={styles.qtdBtn}
-                      onPress={() =>
-                        ctrl.adicionarItem(item, ctrl.restaurante?.id)
-                      }
-                    >
-                      <Ionicons name="add" size={18} color="#2E7D32" />
-                    </TouchableOpacity>
+                    ) : (
+                      <View style={styles.itemFotoPlaceholder} />
+                    )}
+
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemNome} numberOfLines={1}>
+                        {item.nome}
+                      </Text>
+
+                      {/* Renderização dos Adicionais escolhidos sincronizada com o Drawer */}
+                      {item.adicionais && item.adicionais.length > 0 && (
+                        <View style={styles.adicionaisContainer}>
+                          {item.adicionais.map((adc, idx) => (
+                            <Text key={adc.id || idx} style={styles.adicionalText}>
+                              + {adc.nome} (+ R$ {Number(adc.preco).toFixed(2).replace(".", ",")})
+                            </Text>
+                          ))}
+                        </View>
+                      )}
+
+                      <Text style={styles.itemPreco}>
+                        R$ {(precoUnitarioTotal * item.qtd).toFixed(2).replace(".", ",")}
+                      </Text>
+                    </View>
+
+                    {/* Controles de Quantidade */}
+                    <View style={styles.qtdContainer}>
+                      <TouchableOpacity
+                        style={styles.qtdBtn}
+                        onPress={() => ctrl.removerItem(item.id)}
+                      >
+                        <Ionicons
+                          name={item.qtd === 1 ? "trash-outline" : "remove"}
+                          size={18}
+                          color="#E53935"
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.qtdText}>{item.qtd}</Text>
+                      <TouchableOpacity
+                        style={styles.qtdBtn}
+                        // Repassando os adicionais para manter a consistência da store
+                        onPress={() =>
+                          ctrl.adicionarItem(item, ctrl.restaurante?.id, 1, item.adicionais)
+                        }
+                      >
+                        <Ionicons name="add" size={18} color="#2E7D32" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
 
             {/* Resumo Financeiro */}
@@ -115,7 +134,7 @@ export function CarrinhoScreen() {
                 </Text>
               </View>
 
-              {/* 👉 NOVO: Resumo de Calorias */}
+              {/* Resumo de Calorias */}
               {ctrl.totalCalorias > 0 && (
                 <View style={styles.resumoRow}>
                   <View style={styles.caloriaLabelContainer}>
@@ -150,7 +169,7 @@ export function CarrinhoScreen() {
 
           {/* Botão Fixo de Continuar */}
           <View style={styles.footer}>
-            {/* 👉 NOVO: Alerta de Pedido Mínimo */}
+            {/* Alerta de Pedido Mínimo */}
             {isAbaixoMinimo && (
               <View style={styles.avisoMinimoContainer}>
                 <Ionicons name="alert-circle" size={20} color="#D32F2F" />
@@ -163,7 +182,6 @@ export function CarrinhoScreen() {
             )}
 
             <TouchableOpacity
-              // 👉 NOVO: Adicionamos o estilo inativo e a propriedade disabled
               style={[
                 styles.btnContinuar,
                 isAbaixoMinimo && styles.btnContinuarInativo,
@@ -265,6 +283,9 @@ const styles = StyleSheet.create({
   },
   itemPreco: { fontSize: 14, color: "#666" },
 
+  adicionaisContainer: { marginBottom: 4 },
+  adicionalText: { fontSize: 12, color: "#888", fontStyle: "italic" },
+
   qtdContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -295,7 +316,6 @@ const styles = StyleSheet.create({
   resumoLabel: { fontSize: 16, color: "#555" },
   resumoValor: { fontSize: 16, color: "#333" },
 
-  // 👉 NOVO: Estilos do item de calorias
   caloriaLabelContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
   caloriasValor: { fontSize: 16, fontWeight: "bold", color: "#FF9800" },
 
@@ -320,7 +340,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   btnContinuarText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
-  // 👉 NOVOS ESTILOS:
+  
   btnContinuarInativo: {
     backgroundColor: "#CCC",
   },

@@ -86,9 +86,9 @@ export const useRestauranteDetalhesController = () => {
     setModalVisivel(false);
   };
 
-  const handleAdicionarItem = (prato, quantidade = 1) => {
-    // 👉 Passa a quantidade como terceiro parâmetro para a store
-    adicionarItemAoCarrinho(prato, idRestaurante, quantidade);
+  // 👉 ATUALIZADO: Agora recebe e repassa os adicionaisSelecionados para o Zustand
+  const handleAdicionarItem = (prato, quantidade = 1, adicionaisSelecionados = []) => {
+    adicionarItemAoCarrinho(prato, idRestaurante, quantidade, adicionaisSelecionados);
     fecharPratoModal();
 
     // 👉 NOVO: Ativa o Toast e programa para ele sumir em 3 segundos

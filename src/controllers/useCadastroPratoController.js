@@ -21,9 +21,28 @@ export const useCadastroPratoController = () => {
   const [calorias, setCalorias] = useState('');
   const [imagemUri, setImagemUri] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  
+  // NOVO ESTADO: Array de acompanhamentos
+  const [acompanhamentos, setAcompanhamentos] = useState([]);
 
   const selecionarTag = (tag) => {
     setCategoria(prev => prev === tag ? '' : tag);
+  };
+
+  // FUNÇÕES DOS ACOMPANHAMENTOS
+  const adicionarAcompanhamento = () => {
+    setAcompanhamentos([...acompanhamentos, { nome: '', preco: '' }]);
+  };
+
+  const atualizarAcompanhamento = (index, campo, valor) => {
+    const novaLista = [...acompanhamentos];
+    novaLista[index][campo] = valor;
+    setAcompanhamentos(novaLista);
+  };
+
+  const removerAcompanhamento = (index) => {
+    const novaLista = acompanhamentos.filter((_, i) => i !== index);
+    setAcompanhamentos(novaLista);
   };
 
   const escolherImagem = async () => {
@@ -82,6 +101,14 @@ export const useCadastroPratoController = () => {
         }
       }
 
+      // Prepara os acompanhamentos ignorando os que não têm nome digitado
+      const acompanhamentosFormatados = acompanhamentos
+        .filter(item => item.nome.trim() !== '')
+        .map(item => ({
+          nome: item.nome.trim(),
+          preco: item.preco ? parseFloat(item.preco.replace(',', '.')) : 0
+        }));
+
       const novoPrato = {
         id_restaurante: idRestauranteAtual,
         nome,
@@ -90,18 +117,21 @@ export const useCadastroPratoController = () => {
         categoria,
         calorias: parseInt(calorias) || 0,
         foto: fotoUrl,
+        acompanhamentos: acompanhamentosFormatados, // Adicionado aqui
       };
 
       await ProdutoModel.cadastrar(novoPrato);
 
       alert("Prato cadastrado com sucesso!");
 
+      // Limpa tudo após o sucesso
       setNome('');
       setDescricao('');
       setPreco('');
       setCategoria('');
       setCalorias('');
       setImagemUri(null);
+      setAcompanhamentos([]); // Limpa acompanhamentos
     } catch (error) {
       console.error("Erro ao salvar prato:", error);
       alert("Erro ao tentar salvar o prato.");
@@ -114,6 +144,7 @@ export const useCadastroPratoController = () => {
     nome, setNome, descricao, setDescricao, preco, setPreco,
     categoria, calorias, setCalorias,
     imagemUri, escolherImagem, salvarPrato, salvando,
-    TAGS, selecionarTag
+    TAGS, selecionarTag,
+    acompanhamentos, adicionarAcompanhamento, atualizarAcompanhamento, removerAcompanhamento
   };
 };

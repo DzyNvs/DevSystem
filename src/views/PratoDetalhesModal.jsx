@@ -12,20 +12,40 @@ import {
 } from "react-native";
 
 export function PratoDetalhesModal({ visible, onClose, prato, onAddToCart }) {
-  // 👉 Estado para controlar a quantidade
+  // 👉 Estado para controlar a quantidade e os adicionais selecionados
   const [quantidade, setQuantidade] = useState(1);
+  const [adicionaisSelecionados, setAdicionaisSelecionados] = useState([]);
 
-  // 👉 Reseta a quantidade para 1 sempre que o modal for aberto
+  // 👉 Reseta a quantidade e as seleções sempre que o modal for aberto
   useEffect(() => {
     if (visible) {
       setQuantidade(1);
+      setAdicionaisSelecionados([]);
     }
   }, [visible, prato]);
 
   if (!prato) return null;
 
-  // Calcula o valor total dinamicamente
-  const precoTotal = prato.preco * quantidade;
+  // 👉 Lógica de Adicionais
+  const toggleAdicional = (acomp) => {
+    const existe = adicionaisSelecionados.find((item) => item.nome === acomp.nome);
+    if (existe) {
+      setAdicionaisSelecionados(
+        adicionaisSelecionados.filter((item) => item.nome !== acomp.nome)
+      );
+    } else {
+      setAdicionaisSelecionados([...adicionaisSelecionados, acomp]);
+    }
+  };
+
+  // 👉 Calcula o valor total dinamicamente (Preço do prato + Soma dos adicionais * Quantidade)
+  const precoBase = Number(prato.preco) || 0;
+  const valorAdicionais = adicionaisSelecionados.reduce(
+    (acc, curr) => acc + (Number(curr.preco) || 0),
+    0
+  );
+  const precoUnitarioTotal = precoBase + valorAdicionais;
+  const precoTotal = precoUnitarioTotal * quantidade;
 
   const incrementar = () => setQuantidade((prev) => prev + 1);
   const decrementar = () => setQuantidade((prev) => (prev > 1 ? prev - 1 : 1));
@@ -39,7 +59,7 @@ export function PratoDetalhesModal({ visible, onClose, prato, onAddToCart }) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <ScrollView style={styles.scrollContainer}>
+          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             {prato.foto ? (
               <Image source={{ uri: prato.foto }} style={styles.fotoModal} />
             ) : (
@@ -77,16 +97,51 @@ export function PratoDetalhesModal({ visible, onClose, prato, onAddToCart }) {
                 </View>
 
                 <View style={styles.dataColModal}>
-                  <Text style={styles.labelModal}>Preço unitário</Text>
+                  <Text style={styles.labelModal}>Preço unitário base</Text>
                   <Text style={styles.precoModal}>
-                    R$ {prato.preco.toFixed(2).replace(".", ",")}
+                    R$ {precoBase.toFixed(2).replace(".", ",")}
                   </Text>
                 </View>
               </View>
+
+              {/* 👉 NOVO: Listagem de Acompanhamentos/Adicionais com Checkbox */}
+              {prato.acompanhamentos && prato.acompanhamentos.length > 0 && (
+                <View style={styles.adicionaisContainer}>
+                  <Text style={styles.labelModal}>Adicionais</Text>
+                  {prato.acompanhamentos.map((acomp, index) => {
+                    const selecionado = adicionaisSelecionados.some(
+                      (item) => item.nome === acomp.nome
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.adicionalRow,
+                          selecionado && styles.adicionalRowSelecionado,
+                        ]}
+                        onPress={() => toggleAdicional(acomp)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.adicionalInfo}>
+                          <Ionicons
+                            name={selecionado ? "checkbox" : "square-outline"}
+                            size={24}
+                            color={selecionado ? "#4CAF50" : "#CCC"}
+                          />
+                          <Text style={styles.adicionalNome}>{acomp.nome}</Text>
+                        </View>
+                        <Text style={styles.adicionalPreco}>
+                          + R$ {Number(acomp.preco).toFixed(2).replace(".", ",")}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           </ScrollView>
 
-          {/* 👉 NOVO: Rodapé com seletor de quantidade e botão de adicionar alinhados */}
+          {/* Rodapé com seletor de quantidade e botão de adicionar alinhados */}
           <View style={styles.footerModal}>
             <View style={styles.quantityContainer}>
               <TouchableOpacity onPress={decrementar} style={styles.qtyButton}>
@@ -106,8 +161,8 @@ export function PratoDetalhesModal({ visible, onClose, prato, onAddToCart }) {
 
             <TouchableOpacity
               style={styles.btnAddToCartModal}
-              // 👉 Passamos o prato e a quantidade escolhida para a função
-              onPress={() => onAddToCart(prato, quantidade)}
+              // 👉 AGORA ENVIAMOS O PRATO, QUANTIDADE E OS ADICIONAIS
+              onPress={() => onAddToCart(prato, quantidade, adicionaisSelecionados)}
             >
               <Text style={styles.btnAddToCartTextModal}>
                 {`Adicionar R$ ${precoTotal.toFixed(2).replace(".", ",")}`}
@@ -151,7 +206,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#CCC",
     borderStyle: "dashed",
   },
-  detailsContainer: { padding: 24 },
+  detailsContainer: { padding: 24, paddingBottom: 40 },
   headerRowModal: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -191,7 +246,43 @@ const styles = StyleSheet.create({
   caloriasTextLargeModal: { fontSize: 16, color: "#FFF", fontWeight: "bold" },
   precoModal: { fontSize: 24, fontWeight: "bold", color: "#2e7d32" },
 
-  // 👉 ESTILOS NOVOS DO RODAPÉ
+  // 👉 NOVOS ESTILOS PARA OS ADICIONAIS
+  adicionaisContainer: {
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderColor: "#EEE",
+    paddingTop: 8,
+  },
+  adicionalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: "#F0F0F0",
+  },
+  adicionalRowSelecionado: {
+    backgroundColor: "rgba(76, 175, 80, 0.05)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginHorizontal: -8,
+  },
+  adicionalInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  adicionalNome: {
+    fontSize: 16,
+    color: "#444",
+  },
+  adicionalPreco: {
+    fontSize: 16,
+    color: "#666",
+    fontWeight: "500",
+  },
+
+  // ESTILOS DO RODAPÉ
   footerModal: {
     flexDirection: "row",
     padding: 16,

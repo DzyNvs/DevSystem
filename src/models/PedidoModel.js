@@ -2,9 +2,6 @@ import { addDoc, collection, doc, getDocs, onSnapshot, query, updateDoc, where }
 import { db } from '../config/firebase';
 
 export const PedidoModel = {
-  // --------------------------------------------------------
-  // FUNÇÕES DO RESTAURANTE E CONSUMIDOR
-  // --------------------------------------------------------
   
   async buscarPedidosDoRestaurante(idDoRestaurante) {
     try {
@@ -12,17 +9,11 @@ export const PedidoModel = {
         collection(db, 'pedidos'),
         where('id_restaurante', '==', idDoRestaurante)
       );
-
       const snapshot = await getDocs(q);
       const pedidos = [];
-
       snapshot.forEach((docSnap) => {
-        pedidos.push({
-          id: docSnap.id, 
-          ...docSnap.data()
-        });
+        pedidos.push({ id: docSnap.id, ...docSnap.data() });
       });
-
       return pedidos;
     } catch (error) {
       console.error("Erro ao buscar pedidos no Model:", error);
@@ -30,14 +21,18 @@ export const PedidoModel = {
     }
   },
 
+  // 👉 ATUALIZADO: Recebe, trata e armazena os novos campos requeridos
   async criarPedido(dadosPedido) {
     try {
       const docRef = await addDoc(collection(db, 'pedidos'), {
         id_restaurante: dadosPedido.id_restaurante,
         id_consumidor: dadosPedido.id_consumidor,
-        itens: dadosPedido.itens,
+        nome_cliente: dadosPedido.nome_cliente || 'Cliente', // Novo mapeamento
+        endereco_entrega: dadosPedido.endereco_entrega || null, // Novo mapeamento estruturado
+        itens: dadosPedido.itens, // Contém { id, nome, preco, qtd, adicionais: [...] }
         subtotal: dadosPedido.subtotal,
         taxa_entrega: dadosPedido.taxa_entrega,
+        desconto_fitcoins: dadosPedido.desconto_fitcoins || 0,
         total_final: dadosPedido.total_final,
         
         status: dadosPedido.status || 'pendente', 
@@ -47,6 +42,10 @@ export const PedidoModel = {
         link_pagamento: dadosPedido.link_pagamento || '',
         tipo_pagamento: dadosPedido.tipo_pagamento || 'online',
         forma_pagamento: dadosPedido.forma_pagamento || 'mercado_pago',
+        
+        observacao: dadosPedido.observacao || '', // Novo Campo adicionado
+        troco: dadosPedido.troco || 0,             // Novo Campo adicionado
+        valor_entregue_dinheiro: dadosPedido.valor_entregue_dinheiro || 0,
         
         data_criacao: new Date(),
       });
@@ -63,18 +62,11 @@ export const PedidoModel = {
         collection(db, 'pedidos'),
         where('id_consumidor', '==', idConsumidor)
       );
-
       const snapshot = await getDocs(q);
       const pedidos = [];
-
       snapshot.forEach((docSnap) => {
-        pedidos.push({
-          id: docSnap.id, 
-          ...docSnap.data()
-        });
+        pedidos.push({ id: docSnap.id, ...docSnap.data() });
       });
-
-      // Ordenar do pedido mais recente para o mais antigo
       return pedidos.sort((a, b) => {
         const dataA = a.data_criacao?.toDate() || 0;
         const dataB = b.data_criacao?.toDate() || 0;
@@ -86,32 +78,21 @@ export const PedidoModel = {
     }
   },
 
-  // NOVA FUNÇÃO: Escuta os pedidos do consumidor em tempo real
   escutarPedidosDoConsumidor(idConsumidor, callback) {
     const q = query(
       collection(db, 'pedidos'),
       where('id_consumidor', '==', idConsumidor)
     );
-
-    // O onSnapshot fica aberto escutando as alterações do Firebase e avisa o controller na hora
     return onSnapshot(q, (snapshot) => {
       const pedidos = [];
-      
       snapshot.forEach((docSnap) => {
-        pedidos.push({
-          id: docSnap.id, 
-          ...docSnap.data()
-        });
+        pedidos.push({ id: docSnap.id, ...docSnap.data() });
       });
-
-      // Mantém ordenado sempre do pedido mais recente para o mais antigo
       pedidos.sort((a, b) => {
         const dataA = a.data_criacao?.toDate() || 0;
         const dataB = b.data_criacao?.toDate() || 0;
         return dataB - dataA;
       });
-
-      // Retorna a lista atualizada para o Controller
       callback(pedidos);
     }, (error) => {
       console.error("Erro ao escutar pedidos em tempo real:", error);
@@ -128,11 +109,6 @@ export const PedidoModel = {
     }
   },
 
-  // --------------------------------------------------------
-  // NOVAS FUNÇÕES DO MOTOBOY (ENTREGADOR)
-  // --------------------------------------------------------
-
-  // Busca pedidos que o restaurante já despachou e não tem entregador
   async buscarPedidosDisponiveisParaEntrega() {
     try {
       const q = query(
@@ -148,7 +124,6 @@ export const PedidoModel = {
     }
   },
 
-  // Busca o histórico de um motoboy específico para calcular os ganhos
   async buscarHistoricoMotorista(idMotorista) {
     try {
       const q = query(
@@ -163,13 +138,12 @@ export const PedidoModel = {
     }
   },
 
-  // Vincula o motoboy ao pedido (Quando ele clica em "Aceitar Corrida")
   async aceitarCorrida(idPedido, idMotorista) {
     try {
       const pedidoRef = doc(db, 'pedidos', idPedido);
       await updateDoc(pedidoRef, { 
         id_motorista: idMotorista,
-        status_entrega: 'coletando' // Indica que o motoboy está a caminho do restaurante
+        status_entrega: 'coletando'
       });
     } catch (error) {
       console.error("Erro ao aceitar corrida:", error);

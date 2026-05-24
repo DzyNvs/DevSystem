@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -42,7 +43,35 @@ export function PagamentoScreen() {
 
         <Text style={styles.titulo}>Finalizar Pedido</Text>
 
-        {/* Banner FitCoins — só aparece se tiver saldo suficiente */}
+        {/* Informações de Entrega */}
+        <View style={styles.cardEndereco}>
+          <Text style={styles.cardTitulo}>Endereço de Entrega (Padrão)</Text>
+          {ctrl.dadosCliente.endereco ? (
+            <View style={styles.enderecoInfoContainer}>
+              <Ionicons name="location" size={20} color="#2E7D32" />
+              <View style={{ marginLeft: 8, flex: 1 }}>
+                <Text style={styles.enderecoTextBold}>
+                  {ctrl.dadosCliente.endereco.apelido || "Endereço"}
+                </Text>
+                <Text style={styles.enderecoText}>
+                  {ctrl.dadosCliente.endereco.rua}, {ctrl.dadosCliente.endereco.numero}
+                </Text>
+                <Text style={styles.enderecoSubtext}>
+                  {ctrl.dadosCliente.endereco.bairro} - {ctrl.dadosCliente.endereco.cidade}
+                </Text>
+                {ctrl.dadosCliente.endereco.complemento ? (
+                  <Text style={styles.enderecoSubtext}>
+                    Comp: {ctrl.dadosCliente.endereco.complemento}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.textAviso}>Buscando endereço padrão ativo...</Text>
+          )}
+        </View>
+
+        {/* Banner FitCoins */}
         {ctrl.percentualDesconto > 0 && (
           <View style={styles.fitCoinsBanner}>
             <View style={styles.fitCoinsInfo}>
@@ -52,8 +81,7 @@ export function PagamentoScreen() {
                   Você tem {ctrl.fitCoins} FitCoins 🎉
                 </Text>
                 <Text style={styles.fitCoinsSubtitle}>
-                  Use para ganhar {ctrl.percentualDesconto}% de desconto no
-                  subtotal
+                  Use para ganhar {ctrl.percentualDesconto}% de desconto no subtotal
                 </Text>
               </View>
             </View>
@@ -73,6 +101,21 @@ export function PagamentoScreen() {
           </View>
         )}
 
+        {/* Campo de Observação do Pedido */}
+        <View style={styles.cardObservacao}>
+          <Text style={styles.cardTitulo}>Alguma observação?</Text>
+          <TextInput
+            style={styles.inputObservacao}
+            placeholder="Ex: Tirar cebola, molho extra, interfone com defeito..."
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={3}
+            value={ctrl.observacao}
+            onChangeText={ctrl.setObservacao}
+            maxLength={250}
+          />
+        </View>
+
         {/* Resumo de valores */}
         <View style={styles.cardResumo}>
           <Text style={styles.cardTitulo}>Resumo de Valores</Text>
@@ -86,19 +129,13 @@ export function PagamentoScreen() {
 
           <View style={styles.resumoRow}>
             <Text style={styles.resumoLabel}>Taxa de Entrega</Text>
-            {/* 👉 Agora ele verifica se é 0 e exibe 'Grátis' */}
             <Text
               style={[
                 styles.resumoValor,
-                ctrl.taxaEntrega === 0 && {
-                  color: "#2E7D32",
-                  fontWeight: "bold",
-                },
+                ctrl.taxaEntrega === 0 && { color: "#2E7D32", fontWeight: "bold" },
               ]}
             >
-              {ctrl.taxaEntrega === 0
-                ? "Grátis"
-                : `R$ ${ctrl.taxaEntrega.toFixed(2).replace(".", ",")}`}
+              {ctrl.taxaEntrega === 0 ? "Grátis" : `R$ ${ctrl.taxaEntrega.toFixed(2).replace(".", ",")}`}
             </Text>
           </View>
 
@@ -107,12 +144,7 @@ export function PagamentoScreen() {
               <Text style={[styles.resumoLabel, { color: "#2E7D32" }]}>
                 Desconto FitCoins ({ctrl.percentualDesconto}%)
               </Text>
-              <Text
-                style={[
-                  styles.resumoValor,
-                  { color: "#2E7D32", fontWeight: "bold" },
-                ]}
-              >
+              <Text style={[styles.resumoValor, { color: "#2E7D32", fontWeight: "bold" }]}>
                 - R$ {ctrl.valorDesconto.toFixed(2).replace(".", ",")}
               </Text>
             </View>
@@ -132,32 +164,24 @@ export function PagamentoScreen() {
         <Text style={styles.cardTitulo}>Como você quer pagar?</Text>
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[
-              styles.tab,
-              ctrl.tipoPagamento === "online" && styles.tabActive,
-            ]}
-            onPress={() => ctrl.setTipoPagamento("online")}
+            style={[styles.tab, ctrl.tipoPagamento === "online" && styles.tabActive]}
+            onPress={() => {
+              ctrl.setTipoPagamento("online");
+              ctrl.setFormaPagamentoEntrega(null);
+            }}
           >
             <Ionicons
               name="phone-portrait-outline"
               size={20}
               color={ctrl.tipoPagamento === "online" ? "#FFF" : "#555"}
             />
-            <Text
-              style={[
-                styles.tabText,
-                ctrl.tipoPagamento === "online" && styles.tabTextActive,
-              ]}
-            >
+            <Text style={[styles.tabText, ctrl.tipoPagamento === "online" && styles.tabTextActive]}>
               Pelo App
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.tab,
-              ctrl.tipoPagamento === "entrega" && styles.tabActive,
-            ]}
+            style={[styles.tab, ctrl.tipoPagamento === "entrega" && styles.tabActive]}
             onPress={() => ctrl.setTipoPagamento("entrega")}
           >
             <Ionicons
@@ -165,12 +189,7 @@ export function PagamentoScreen() {
               size={20}
               color={ctrl.tipoPagamento === "entrega" ? "#FFF" : "#555"}
             />
-            <Text
-              style={[
-                styles.tabText,
-                ctrl.tipoPagamento === "entrega" && styles.tabTextActive,
-              ]}
-            >
+            <Text style={[styles.tabText, ctrl.tipoPagamento === "entrega" && styles.tabTextActive]}>
               Na Entrega
             </Text>
           </TouchableOpacity>
@@ -185,38 +204,61 @@ export function PagamentoScreen() {
                 Restaurante não definiu opções de pagamento.
               </Text>
             ) : (
-              Object.entries(ctrl.opcoesRestaurante).map(
-                ([chave, disponivel]) => {
-                  if (!disponivel) return null;
-                  const selecionado = ctrl.formaPagamentoEntrega === chave;
-                  return (
-                    <TouchableOpacity
-                      key={chave}
-                      style={[
-                        styles.btnFormaPagamento,
-                        selecionado && styles.btnFormaPagamentoAtivo,
-                      ]}
-                      onPress={() => ctrl.setFormaPagamentoEntrega(chave)}
-                    >
-                      <Ionicons
-                        name={
-                          selecionado ? "radio-button-on" : "radio-button-off"
-                        }
-                        size={20}
-                        color={selecionado ? "#2E7D32" : "#999"}
-                      />
-                      <Text
-                        style={[
-                          styles.textoFormaPagamento,
-                          selecionado && styles.textoFormaPagamentoAtivo,
-                        ]}
-                      >
-                        {formatarNomePagamento(chave)}
+              Object.entries(ctrl.opcoesRestaurante).map(([chave, disponivel]) => {
+                if (!disponivel) return null;
+                const selecionado = ctrl.formaPagamentoEntrega === chave;
+                return (
+                  <TouchableOpacity
+                    key={chave}
+                    style={[styles.btnFormaPagamento, selecionado && styles.btnFormaPagamentoAtivo]}
+                    onPress={() => ctrl.setFormaPagamentoEntrega(chave)}
+                  >
+                    <Ionicons
+                      name={selecionado ? "radio-button-on" : "radio-button-off"}
+                      size={20}
+                      color={selecionado ? "#2E7D32" : "#999"}
+                    />
+                    <Text style={[styles.textoFormaPagamento, selecionado && styles.textoFormaPagamentoAtivo]}>
+                      {formatarNomePagamento(chave)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+
+            {/* Painel Condicional de Troco para Pagamentos em Dinheiro */}
+            {ctrl.formaPagamentoEntrega === "dinheiro" && (
+              <View style={styles.trocoContainer}>
+                <View style={styles.trocoRowSwitch}>
+                  <Text style={styles.trocoLabel}>Precisa de troco?</Text>
+                  <Switch
+                    value={ctrl.requerTroco}
+                    onValueChange={ctrl.setRequerTroco}
+                    trackColor={{ false: "#CCC", true: "#A5D6A7" }}
+                    thumbColor={ctrl.requerTroco ? "#2E7D32" : "#FFF"}
+                  />
+                </View>
+
+                {ctrl.requerTroco && (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.trocoSublabel}>Troco para quanto?</Text>
+                    <TextInput
+                      style={styles.inputTroco}
+                      keyboardType="numeric"
+                      placeholder="Ex: 50, 100"
+                      value={ctrl.valorEntregue}
+                      onChangeText={ctrl.setValorEntregue}
+                    />
+                    {ctrl.troco > 0 ? (
+                      <Text style={styles.trocoResultadoText}>
+                        Troco a devolver: <Text style={{ color: '#2E7D32' }}>R$ {ctrl.troco.toFixed(2).replace('.', ',')}</Text>
                       </Text>
-                    </TouchableOpacity>
-                  );
-                },
-              )
+                    ) : ctrl.valorEntregue !== "" ? (
+                      <Text style={styles.trocoErroText}>O valor digitado deve ser maior que o total</Text>
+                    ) : null}
+                  </View>
+                )}
+              </View>
             )}
           </View>
         )}
@@ -231,25 +273,18 @@ export function PagamentoScreen() {
           <TouchableOpacity
             style={[
               styles.btnFinalizar,
-              {
-                backgroundColor:
-                  ctrl.tipoPagamento === "online" ? "#009EE3" : "#2E7D32",
-              },
+              { backgroundColor: ctrl.tipoPagamento === "online" ? "#009EE3" : "#2E7D32" },
             ]}
             onPress={ctrl.finalizarPedido}
           >
             <Ionicons
-              name={
-                ctrl.tipoPagamento === "online" ? "card" : "checkmark-circle"
-              }
+              name={ctrl.tipoPagamento === "online" ? "card" : "checkmark-circle"}
               size={24}
               color="#FFF"
               style={{ marginRight: 10 }}
             />
             <Text style={styles.btnFinalizarText}>
-              {ctrl.tipoPagamento === "online"
-                ? "Pagar com Mercado Pago"
-                : "Finalizar Pedido"}
+              {ctrl.tipoPagamento === "online" ? "Pagar com Mercado Pago" : "Finalizar Pedido"}
             </Text>
           </TouchableOpacity>
         )}
@@ -260,74 +295,34 @@ export function PagamentoScreen() {
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#FAF9F2" },
-  content: {
-    flex: 1,
-    padding: 30,
-    maxWidth: 600,
-    width: "100%",
-    alignSelf: "center",
-  },
+  content: { flex: 1, padding: 30, maxWidth: 600, width: "100%", alignSelf: "center" },
   backButton: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
   backText: { fontSize: 16, color: "#333", marginLeft: 8 },
-  titulo: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#2E7D32",
-    marginBottom: 20,
-  },
+  titulo: { fontSize: 28, fontWeight: "bold", color: "#2E7D32", marginBottom: 20 },
+
+  // Endereco Card
+  cardEndereco: { backgroundColor: "#FFF", padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  enderecoInfoContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  enderecoTextBold: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  enderecoText: { fontSize: 14, color: '#555', marginTop: 2 },
+  enderecoSubtext: { fontSize: 12, color: '#777', marginTop: 1 },
+
+  // Observacao Card
+  cardObservacao: { backgroundColor: "#FFF", padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  inputObservacao: { backgroundColor: '#FAF9F2', borderRadius: 8, padding: 12, marginTop: 8, textAlignVertical: 'top', color: '#333', fontSize: 14, borderWidth: 1, borderColor: '#E0E0E0' },
 
   // FitCoins Banner
-  fitCoinsBanner: {
-    backgroundColor: "#FFFDE7",
-    borderWidth: 1,
-    borderColor: "#FFC107",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  fitCoinsInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
+  fitCoinsBanner: { backgroundColor: "#FFFDE7", borderWidth: 1, borderColor: "#FFC107", borderRadius: 12, padding: 16, marginBottom: 20 },
+  fitCoinsInfo: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   fitCoinsTitle: { fontSize: 16, fontWeight: "bold", color: "#111" },
   fitCoinsSubtitle: { fontSize: 13, color: "#555", marginTop: 2 },
-  fitCoinsToggleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  fitCoinsToggleLabel: {
-    fontSize: 14,
-    color: "#2E7D32",
-    fontWeight: "bold",
-    flex: 1,
-    marginRight: 10,
-  },
+  fitCoinsToggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  fitCoinsToggleLabel: { fontSize: 14, color: "#2E7D32", fontWeight: "bold", flex: 1, marginRight: 10 },
 
   // Resumo
-  cardResumo: {
-    backgroundColor: "#FFF",
-    padding: 24,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 30,
-  },
-  cardTitulo: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111",
-    marginBottom: 16,
-  },
-  resumoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
+  cardResumo: { backgroundColor: "#FFF", padding: 24, borderRadius: 12, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, marginBottom: 30 },
+  cardTitulo: { fontSize: 18, fontWeight: "bold", color: "#111", marginBottom: 12 },
+  resumoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   resumoLabel: { fontSize: 16, color: "#555" },
   resumoValor: { fontSize: 16, color: "#333" },
   divisor: { height: 1, backgroundColor: "#EEE", marginVertical: 16 },
@@ -335,59 +330,29 @@ const styles = StyleSheet.create({
   resumoTotalValor: { fontSize: 24, fontWeight: "bold", color: "#2E7D32" },
 
   // Abas
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 6,
-    gap: 8,
-  },
+  tabContainer: { flexDirection: "row", backgroundColor: "#E0E0E0", borderRadius: 8, padding: 4, marginBottom: 20 },
+  tab: { flex: 1, flexDirection: "row", justifyContent: "center", alignItems: "center", paddingVertical: 12, borderRadius: 6, gap: 8 },
   tabActive: { backgroundColor: "#2E7D32", elevation: 2 },
   tabText: { fontSize: 16, fontWeight: "bold", color: "#555" },
   tabTextActive: { color: "#FFF" },
 
   // Entrega
-  entregaContainer: {
-    marginBottom: 20,
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 12,
-    elevation: 1,
-  },
+  entregaContainer: { marginBottom: 20, backgroundColor: "#FFF", padding: 16, borderRadius: 12, elevation: 1 },
   textAviso: { color: "#777", textAlign: "center", fontStyle: "italic" },
-  btnFormaPagamento: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    gap: 10,
-  },
-  btnFormaPagamentoAtivo: {
-    backgroundColor: "#F1F8E9",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-  },
+  btnFormaPagamento: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F0F0F0", gap: 10 },
+  btnFormaPagamentoAtivo: { backgroundColor: "#F1F8E9", borderRadius: 8, paddingHorizontal: 8 },
   textoFormaPagamento: { fontSize: 16, color: "#555" },
   textoFormaPagamentoAtivo: { color: "#2E7D32", fontWeight: "bold" },
 
-  btnFinalizar: {
-    flexDirection: "row",
-    height: 56,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 2,
-    marginBottom: 40,
-  },
+  // Troco Container
+  trocoContainer: { marginTop: 15, padding: 12, backgroundColor: '#FAF9F2', borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0' },
+  trocoRowSwitch: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  trocoLabel: { fontSize: 15, fontWeight: '600', color: '#333' },
+  trocoSublabel: { fontSize: 13, color: '#666', marginBottom: 5 },
+  inputTroco: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CCC', borderRadius: 6, paddingHorizontal: 10, height: 40, color: '#333' },
+  trocoResultadoText: { fontSize: 14, fontWeight: 'bold', color: '#333', marginTop: 10 },
+  trocoErroText: { fontSize: 12, color: '#D32F2F', marginTop: 5 },
+
+  btnFinalizar: { flexDirection: "row", height: 56, borderRadius: 8, justifyContent: "center", alignItems: "center", elevation: 2, marginBottom: 40 },
   btnFinalizarText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
 });

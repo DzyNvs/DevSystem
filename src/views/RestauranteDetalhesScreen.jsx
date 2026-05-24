@@ -204,9 +204,9 @@ export function RestauranteDetalhesScreen() {
         visible={ctrl.modalVisivel}
         onClose={ctrl.fecharPratoModal}
         prato={ctrl.pratoSelecionado}
-        // 👉 Agora recebemos o prato e a quantidade
-        onAddToCart={(prato, quantidade) =>
-          ctrl.handleAdicionarItem(prato, quantidade)
+        // 👉 ATUALIZADO: Agora recebemos o prato, a quantidade e os adicionaisSelecionados
+        onAddToCart={(prato, quantidade, adicionaisSelecionados) =>
+          ctrl.handleAdicionarItem(prato, quantidade, adicionaisSelecionados)
         }
       />
 
@@ -323,7 +323,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  // 👉 NOVO ESTILO: Estilos do filtro
   filterContainer: {
     backgroundColor: "#FFF",
     padding: 16,
@@ -386,12 +385,11 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  // 👉 NOVOS ESTILOS: Caixinha do Aviso (Toast) Flutuante
   toastContainer: {
     position: "absolute",
     bottom: 40,
     alignSelf: "center",
-    backgroundColor: "#2E7D32", // Verde escuro combinando com seu app
+    backgroundColor: "#2E7D32", 
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
@@ -403,7 +401,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    zIndex: 9999, // Garante que fica por cima de toda a interface
+    zIndex: 9999, 
   },
   toastText: {
     color: "#FFFFFF",
