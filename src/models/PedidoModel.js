@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export const PedidoModel = {
@@ -84,6 +84,38 @@ export const PedidoModel = {
       console.error("Erro ao buscar pedidos do consumidor:", error);
       throw error;
     }
+  },
+
+  // NOVA FUNÇÃO: Escuta os pedidos do consumidor em tempo real
+  escutarPedidosDoConsumidor(idConsumidor, callback) {
+    const q = query(
+      collection(db, 'pedidos'),
+      where('id_consumidor', '==', idConsumidor)
+    );
+
+    // O onSnapshot fica aberto escutando as alterações do Firebase e avisa o controller na hora
+    return onSnapshot(q, (snapshot) => {
+      const pedidos = [];
+      
+      snapshot.forEach((docSnap) => {
+        pedidos.push({
+          id: docSnap.id, 
+          ...docSnap.data()
+        });
+      });
+
+      // Mantém ordenado sempre do pedido mais recente para o mais antigo
+      pedidos.sort((a, b) => {
+        const dataA = a.data_criacao?.toDate() || 0;
+        const dataB = b.data_criacao?.toDate() || 0;
+        return dataB - dataA;
+      });
+
+      // Retorna a lista atualizada para o Controller
+      callback(pedidos);
+    }, (error) => {
+      console.error("Erro ao escutar pedidos em tempo real:", error);
+    });
   },
 
   async atualizarStatusPedido(idPedido, novoStatus) {

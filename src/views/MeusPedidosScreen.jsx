@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useMeusPedidosController } from '../controllers/useMeusPedidosController';
 
 function Estrelas({ nota, onSelect, desabilitado }) {
@@ -82,16 +82,39 @@ export function MeusPedidosScreen() {
     const notaAtual = notaSelecionada[item.id] || 0;
     const comentarioAtual = comentarios[item.id] || '';
 
+    // SOLUÇÃO: Verificando se é Web ou Celular para disparar o aviso
+    const handleCancelar = () => {
+      if (Platform.OS === 'web') {
+        const confirmou = window.confirm("Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.");
+        if (confirmou) {
+          ctrl.cancelarPedido(item.id);
+        }
+      } else {
+        Alert.alert(
+          "Cancelar Pedido",
+          "Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.",
+          [
+            { text: "Não, manter", style: "cancel" },
+            { 
+              text: "Sim, Cancelar", 
+              onPress: () => ctrl.cancelarPedido(item.id),
+              style: "destructive"
+            }
+          ]
+        );
+      }
+    };
+
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => {
-          if (abaAtiva === 'andamento') {
-            router.push({ pathname: '/acompanhamento', params: { idPedido: item.id } });
-          }
-        }}
-      >
-        <View style={styles.card}>
+      <View style={styles.card}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            if (abaAtiva === 'andamento') {
+              router.push({ pathname: '/acompanhamento', params: { idPedido: item.id } });
+            }
+          }}
+        >
           <View style={styles.cardHeader}>
             <Text style={styles.data}>{formatarData(item.data_criacao)}</Text>
             <View style={[styles.badge, { backgroundColor: statusFormatado.fundo }]}>
@@ -109,71 +132,76 @@ export function MeusPedidosScreen() {
             <Text style={styles.totalLabel}>Total pago:</Text>
             <Text style={styles.totalValor}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
           </View>
+        </TouchableOpacity>
 
-          {/* Bloco de avaliação — só em pedidos entregues */}
-          {item.status === 'entregue' && (
-            <>
-              <View style={styles.divisor} />
+        {item.status === 'pendente' && (
+          <TouchableOpacity style={styles.btnCancelar} onPress={handleCancelar}>
+            <Ionicons name="close-circle-outline" size={20} color="#C62828" />
+            <Text style={styles.btnCancelarTexto}>Cancelar Pedido</Text>
+          </TouchableOpacity>
+        )}
 
-              {jaAvaliado ? (
-                <View>
-                  <View style={styles.avaliadoContainer}>
-                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                    <Text style={styles.avaliadoTexto}>Avaliado — você ganhou </Text>
-                    <Ionicons name="logo-bitcoin" size={16} color="#FFC107" />
-                    <Text style={styles.fitCoinsTextoAmarelo}> 30 FitCoins</Text>
-                  </View>
-                  {item.comentario_avaliacao ? (
-                    <Text style={styles.comentarioSalvo}>"{item.comentario_avaliacao}"</Text>
-                  ) : null}
+        {item.status === 'entregue' && (
+          <>
+            <View style={styles.divisor} />
+
+            {jaAvaliado ? (
+              <View>
+                <View style={styles.avaliadoContainer}>
+                  <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+                  <Text style={styles.avaliadoTexto}>Avaliado — você ganhou </Text>
+                  <Ionicons name="logo-bitcoin" size={16} color="#FFC107" />
+                  <Text style={styles.fitCoinsTextoAmarelo}> 30 FitCoins</Text>
                 </View>
-              ) : (
-                <View style={styles.avaliacaoContainer}>
-                  <Text style={styles.avaliacaoTitulo}>Como foi o seu pedido?</Text>
+                {item.comentario_avaliacao ? (
+                  <Text style={styles.comentarioSalvo}>"{item.comentario_avaliacao}"</Text>
+                ) : null}
+              </View>
+            ) : (
+              <View style={styles.avaliacaoContainer}>
+                <Text style={styles.avaliacaoTitulo}>Como foi o seu pedido?</Text>
 
-                  <Estrelas
-                    nota={notaAtual}
-                    onSelect={(nota) => setNotaSelecionada(prev => ({ ...prev, [item.id]: nota }))}
-                    desabilitado={estaAvaliando}
+                <Estrelas
+                  nota={notaAtual}
+                  onSelect={(nota) => setNotaSelecionada(prev => ({ ...prev, [item.id]: nota }))}
+                  desabilitado={estaAvaliando}
+                />
+
+                {notaAtual > 0 && (
+                  <TextInput
+                    style={styles.inputComentario}
+                    placeholder="Deixe um comentário (opcional)..."
+                    placeholderTextColor="#AAA"
+                    value={comentarioAtual}
+                    onChangeText={(texto) => setComentarios(prev => ({ ...prev, [item.id]: texto }))}
+                    multiline
+                    numberOfLines={3}
+                    maxLength={300}
+                    editable={!estaAvaliando}
                   />
+                )}
 
-                  {/* Caixa de comentário — aparece após selecionar a nota */}
-                  {notaAtual > 0 && (
-                    <TextInput
-                      style={styles.inputComentario}
-                      placeholder="Deixe um comentário (opcional)..."
-                      placeholderTextColor="#AAA"
-                      value={comentarioAtual}
-                      onChangeText={(texto) => setComentarios(prev => ({ ...prev, [item.id]: texto }))}
-                      multiline
-                      numberOfLines={3}
-                      maxLength={300}
-                      editable={!estaAvaliando}
-                    />
-                  )}
-
-                  {notaAtual > 0 && (
-                    <TouchableOpacity
-                      style={styles.btnAvaliar}
-                      onPress={() => handleConfirmarAvaliacao(item.id)}
-                      disabled={estaAvaliando}
-                    >
-                      {estaAvaliando ? (
-                        <ActivityIndicator size="small" color="#FFF" />
-                      ) : (
-                        <>
-                          <Ionicons name="logo-bitcoin" size={16} color="#FFF" />
-                          <Text style={styles.btnAvaliarTexto}>Confirmar e ganhar 30 FitCoins</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </>
-          )}
-        </View>
-      </TouchableOpacity>
+                {notaAtual > 0 && (
+                  <TouchableOpacity
+                    style={styles.btnAvaliar}
+                    onPress={() => handleConfirmarAvaliacao(item.id)}
+                    disabled={estaAvaliando}
+                  >
+                    {estaAvaliando ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-bitcoin" size={16} color="#FFF" />
+                        <Text style={styles.btnAvaliarTexto}>Confirmar e ganhar 30 FitCoins</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </View>
     );
   };
 
@@ -188,7 +216,6 @@ export function MeusPedidosScreen() {
           <Text style={styles.titulo}>Meus Pedidos</Text>
         </View>
 
-        {/* Banner FitCoins */}
         <View style={styles.fitCoinsBanner}>
           <View style={styles.fitCoinsEsquerda}>
             <Ionicons name="logo-bitcoin" size={28} color="#FFC107" />
@@ -206,7 +233,6 @@ export function MeusPedidosScreen() {
           </View>
         </View>
 
-        {/* Abas */}
         <View style={styles.abasContainer}>
           <TouchableOpacity
             style={[styles.abaBtn, abaAtiva === 'andamento' && styles.abaBtnAtiva]}
@@ -240,7 +266,6 @@ export function MeusPedidosScreen() {
         )}
       </View>
 
-      {/* Toast */}
       {ctrl.toastVisivel && (
         <View style={styles.toast}>
           <Ionicons name="logo-bitcoin" size={20} color="#FFC107" />
@@ -283,6 +308,24 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14, color: '#555' },
   totalValor: { fontSize: 18, fontWeight: 'bold', color: '#111' },
+
+  btnCancelar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF9A9A',
+  },
+  btnCancelarTexto: {
+    color: '#C62828',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
 
   avaliacaoContainer: { marginTop: 8 },
   avaliacaoTitulo: { fontSize: 15, fontWeight: 'bold', color: '#333' },
