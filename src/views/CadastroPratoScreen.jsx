@@ -39,7 +39,7 @@ export function CadastroPratoScreen() {
 
         {/* CARD PRINCIPAL */}
         <View style={styles.card}>
-          {/* Foto do Prato */}
+          {/* Foto do Prato — compacta */}
           <Text style={styles.label}>Foto do Prato</Text>
           <TouchableOpacity
             style={styles.imagemContainer}
@@ -65,7 +65,7 @@ export function CadastroPratoScreen() {
             value={ctrl.nome}
             onChangeText={ctrl.setNome}
             placeholder="Ex: Strogonoff de Frango"
-            placeholderTextColor="#999"
+            placeholderTextColor="#999" // 👉 Adicionado cinza para o placeholder
           />
 
           {/* Descrição */}
@@ -75,7 +75,7 @@ export function CadastroPratoScreen() {
             value={ctrl.descricao}
             onChangeText={ctrl.setDescricao}
             placeholder="Ingredientes e detalhes..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#999" // 👉 Adicionado cinza para o placeholder
             multiline
           />
 
@@ -88,7 +88,7 @@ export function CadastroPratoScreen() {
                 value={ctrl.preco}
                 onChangeText={ctrl.setPreco}
                 placeholder="25,90"
-                placeholderTextColor="#999"
+                placeholderTextColor="#999" // 👉 Adicionado cinza para o placeholder
                 keyboardType="numeric"
               />
             </View>
@@ -99,7 +99,7 @@ export function CadastroPratoScreen() {
                 value={ctrl.calorias}
                 onChangeText={ctrl.setCalorias}
                 placeholder="Ex: 350"
-                placeholderTextColor="#999"
+                placeholderTextColor="#999" // 👉 Adicionado cinza para o placeholder
                 keyboardType="numeric"
               />
             </View>
@@ -291,11 +291,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
-    color: "#333",
+    color: "#333", // Mantém a cor do texto digitado escura e legível
   },
   row: { flexDirection: "row", gap: 12 },
   col: { flex: 1 },
 
+  // Tags
   tagHelper: { fontSize: 12, color: "#999", marginBottom: 10 },
   tagsContainer: {
     flexDirection: "row",

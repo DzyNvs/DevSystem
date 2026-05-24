@@ -134,7 +134,7 @@ export function CarrinhoScreen() {
                 </Text>
               </View>
 
-              {/* Resumo de Calorias */}
+              {/* 👉 NOVO: Resumo de Calorias */}
               {ctrl.totalCalorias > 0 && (
                 <View style={styles.resumoRow}>
                   <View style={styles.caloriaLabelContainer}>
@@ -169,7 +169,7 @@ export function CarrinhoScreen() {
 
           {/* Botão Fixo de Continuar */}
           <View style={styles.footer}>
-            {/* Alerta de Pedido Mínimo */}
+            {/* 👉 NOVO: Alerta de Pedido Mínimo */}
             {isAbaixoMinimo && (
               <View style={styles.avisoMinimoContainer}>
                 <Ionicons name="alert-circle" size={20} color="#D32F2F" />
@@ -182,6 +182,7 @@ export function CarrinhoScreen() {
             )}
 
             <TouchableOpacity
+              // 👉 NOVO: Adicionamos o estilo inativo e a propriedade disabled
               style={[
                 styles.btnContinuar,
                 isAbaixoMinimo && styles.btnContinuarInativo,
@@ -316,6 +317,7 @@ const styles = StyleSheet.create({
   resumoLabel: { fontSize: 16, color: "#555" },
   resumoValor: { fontSize: 16, color: "#333" },
 
+  // 👉 NOVO: Estilos do item de calorias
   caloriaLabelContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
   caloriasValor: { fontSize: 16, fontWeight: "bold", color: "#FF9800" },
 
@@ -340,7 +342,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   btnContinuarText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
-  
+
+  // 👉 NOVOS ESTILOS:
   btnContinuarInativo: {
     backgroundColor: "#CCC",
   },

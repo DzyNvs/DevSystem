@@ -118,6 +118,6 @@ export const useCarrinhoStore = create(
         restauranteId: state.restauranteId,
         enderecoAtivo: state.enderecoAtivo, // persiste o endereço entre sessões
       }),
-    },
-  ),
+    }
+  )
 );

@@ -129,13 +129,19 @@ export function PagamentoScreen() {
 
           <View style={styles.resumoRow}>
             <Text style={styles.resumoLabel}>Taxa de Entrega</Text>
+            {/* 👉 Agora ele verifica se é 0 e exibe 'Grátis' */}
             <Text
               style={[
                 styles.resumoValor,
-                ctrl.taxaEntrega === 0 && { color: "#2E7D32", fontWeight: "bold" },
+                ctrl.taxaEntrega === 0 && {
+                  color: "#2E7D32",
+                  fontWeight: "bold",
+                },
               ]}
             >
-              {ctrl.taxaEntrega === 0 ? "Grátis" : `R$ ${ctrl.taxaEntrega.toFixed(2).replace(".", ",")}`}
+              {ctrl.taxaEntrega === 0
+                ? "Grátis"
+                : `R$ ${ctrl.taxaEntrega.toFixed(2).replace(".", ",")}`}
             </Text>
           </View>
 
@@ -175,7 +181,12 @@ export function PagamentoScreen() {
               size={20}
               color={ctrl.tipoPagamento === "online" ? "#FFF" : "#555"}
             />
-            <Text style={[styles.tabText, ctrl.tipoPagamento === "online" && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                ctrl.tipoPagamento === "online" && styles.tabTextActive,
+              ]}
+            >
               Pelo App
             </Text>
           </TouchableOpacity>
@@ -189,7 +200,12 @@ export function PagamentoScreen() {
               size={20}
               color={ctrl.tipoPagamento === "entrega" ? "#FFF" : "#555"}
             />
-            <Text style={[styles.tabText, ctrl.tipoPagamento === "entrega" && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                ctrl.tipoPagamento === "entrega" && styles.tabTextActive,
+              ]}
+            >
               Na Entrega
             </Text>
           </TouchableOpacity>
@@ -284,7 +300,9 @@ export function PagamentoScreen() {
               style={{ marginRight: 10 }}
             />
             <Text style={styles.btnFinalizarText}>
-              {ctrl.tipoPagamento === "online" ? "Pagar com Mercado Pago" : "Finalizar Pedido"}
+              {ctrl.tipoPagamento === "online"
+                ? "Pagar com Mercado Pago"
+                : "Finalizar Pedido"}
             </Text>
           </TouchableOpacity>
         )}
@@ -353,6 +371,6 @@ const styles = StyleSheet.create({
   trocoResultadoText: { fontSize: 14, fontWeight: 'bold', color: '#333', marginTop: 10 },
   trocoErroText: { fontSize: 12, color: '#D32F2F', marginTop: 5 },
 
-  btnFinalizar: { flexDirection: "row", height: 56, borderRadius: 8, justifyContent: "center", alignItems: "center", elevation: 2, marginBottom: 40 },
-  btnFinalizarText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
+  btnFinalizar: { flexDirection: 'row', height: 56, borderRadius: 8, justifyContent: 'center', alignItems: 'center', elevation: 2, marginBottom: 40 },
+  btnFinalizarText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
 });

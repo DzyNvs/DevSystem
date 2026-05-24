@@ -33,7 +33,7 @@ export const useCarrinhoController = () => {
         setRestaurante({
           id: restauranteId,
           nome: dados.nome_fantasia || dados.razao_social || "Restaurante",
-          taxaEntrega: dados.taxa_entrega || 5.0, 
+          taxaEntrega: dados.taxa_entrega || 5.0, // Padrão R$ 5,00 se o restaurante não tiver cadastrado
           pedidoMinimo: Number(dados.pedido_minimo || 0),
         });
       }
@@ -51,7 +51,7 @@ export const useCarrinhoController = () => {
     return acc + (valorUnitarioFinal * item.qtd);
   }, 0);
 
-  // Cálculo do total de calorias da sacola
+  // 👉 NOVO: Cálculo do total de calorias da sacola
   const totalCalorias = itens.reduce(
     (acc, item) => acc + (Number(item.calorias) || 0) * item.qtd,
     0,
@@ -73,7 +73,7 @@ export const useCarrinhoController = () => {
     restaurante,
     carregando,
     subtotal,
-    totalCalorias, 
+    totalCalorias, // 👉 Exportando as calorias para a View
     taxaEntrega,
     totalFinal,
     adicionarItem,

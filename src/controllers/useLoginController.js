@@ -123,10 +123,20 @@ export const useLoginController = () => {
 
       if (!userUid) throw new Error("Falha ao recuperar ID do usuário.");
 
-      // ✅ ADMIN — redireciona direto, sem precisar de coleção
+      // ✅ ADMIN — não exige verificação de e-mail, redireciona direto, sem precisar de coleção
       if (emailConfirmado.toLowerCase() === "devsystemimpacta@gmail.com") {
         router.replace("/(tabs)/admin/home");
         return;
+      }
+
+      // Recarrega o usuário para garantir o emailVerified mais recente
+      await auth.currentUser.reload();
+      const usuarioAtualizado = auth.currentUser;
+
+      if (!usuarioAtualizado?.emailVerified) {
+        // Desloga imediatamente para não deixar sessão aberta
+        await LoginModel.sair();
+        throw new Error("EMAIL_NAO_VERIFICADO");
       }
 
       // --- LÓGICA DE REDIRECIONAMENTO POR TIPO DE USUÁRIO ---
@@ -162,7 +172,13 @@ export const useLoginController = () => {
       router.replace("/home-consumidor-screen");
     } catch (error) {
       console.log("Erro no login:", error);
-      setErro(error.message || "Código inválido ou expirado.");
+      if (error.message === "EMAIL_NAO_VERIFICADO") {
+        setErro(
+          "E-mail não confirmado. Acesse sua caixa de entrada e clique no link de verificação antes de fazer login.",
+        );
+      } else {
+        setErro(error.message || "Código inválido ou expirado.");
+      }
     } finally {
       setCarregando(false);
     }

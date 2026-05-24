@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { addDoc, collection, doc, GeoPoint } from 'firebase/firestore';
+import { addDoc, collection, doc, GeoPoint, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Platform, ScrollView,
@@ -99,7 +99,7 @@ export default function EscolherEnderecoScreen() {
     debounceRef.current = setTimeout(async () => {
       setBuscandoNoMapa(true);
       try {
-        let query = '';
+        let queryStr = '';
 
         if (temCepCompleto) {
           // Usa ViaCEP apenas para montar a query de geocoding — NÃO sobrescreve campos
@@ -109,7 +109,7 @@ export default function EscolherEnderecoScreen() {
             const logradouro = ruaV || dataCep.logradouro || '';
             const bairroQ    = bairroV || dataCep.bairro || '';
             const cidadeQ    = cidadeV || dataCep.localidade || '';
-            query = `${logradouro} ${numV}, ${bairroQ}, ${cidadeQ}, Brazil`;
+            queryStr = `${logradouro} ${numV}, ${bairroQ}, ${cidadeQ}, Brazil`;
 
             // Preenche só os campos que estiverem vazios (usa parâmetros, não state)
             if (!ruaV    && dataCep.logradouro) setRua(dataCep.logradouro);
@@ -118,10 +118,10 @@ export default function EscolherEnderecoScreen() {
           }
         }
 
-        if (!query) query = `${ruaV} ${numV}, ${bairroV}, ${cidadeV}, Brazil`;
+        if (!queryStr) queryStr = `${ruaV} ${numV}, ${bairroV}, ${cidadeV}, Brazil`;
 
         const res     = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&limit=1`,
           { headers: { 'User-Agent': 'FitWayApp' } }
         );
         const results = await res.json();
@@ -181,24 +181,49 @@ export default function EscolherEnderecoScreen() {
   // ── Salvar no Firestore ─────────────────────────────────────────────────
   const handleConfirmar = async () => {
     const user = auth.currentUser;
-    if (!user || !localizacao) return;
+    if (!user) return;
 
-    if (!numero.trim()) { Alert.alert('Atenção', 'Digite o número do endereço.'); return; }
+    if (!localizacao) {
+      Alert.alert('Atenção', 'Não foi possível obter a localização. Ative o GPS ou mova o pin no mapa.');
+      return;
+    }
+    const numeroFinal = numero.trim() || 'S/N';
+    // Rejeita valores que não sejam vazios, nem contenham dígito, nem sejam "S/N" explícito
+    const eSN = /^s\/?n$/i.test(numeroFinal);
+    if (!eSN && !/\d/.test(numeroFinal)) {
+      Alert.alert('Atenção', 'Número inválido. Use dígitos (ex: 123, 12A) ou deixe em branco para S/N.');
+      return;
+    }
     if (!rua.trim())    { Alert.alert('Atenção', 'Preencha o nome da rua.'); return; }
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length > 0 && cepLimpo.length !== 8) {
+      Alert.alert('Atenção', 'CEP inválido. Informe os 8 dígitos (ex: 01310-100).');
+      return;
+    }
 
     setSalvando(true);
     try {
+      // Verifica se já existe algum endereço para este usuário
+      // O primeiro endereço salvo entra como padrão; os demais, não
+      const refConsumidor = doc(db, 'consumidores', user.uid);
+      const qExistentes = query(
+        collection(db, 'enderecos'),
+        where('id_consumidor', '==', refConsumidor)
+      );
+      const snapExistentes = await getDocs(qExistentes);
+      const ehPrimeiro = snapExistentes.empty;
+
       await addDoc(collection(db, 'enderecos'), {
         apelido:        apelido.trim() || 'Casa',
         rua,
-        numero,
+        numero:         numeroFinal,
         bairro,
         cidade,
         cep,
         complemento,
         geolocalizacao: new GeoPoint(localizacao.latitude, localizacao.longitude),
-        id_consumidor:  doc(db, 'consumidores', user.uid),
-        padrao:         true,
+        id_consumidor:  refConsumidor,
+        padrao:         ehPrimeiro,
       });
       router.back();
     } catch (e) {
