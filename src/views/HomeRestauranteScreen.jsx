@@ -1,3 +1,4 @@
+
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -51,9 +52,23 @@ export function HomeRestauranteScreen() {
           </View>
 
           <View style={styles.metricaCard}>
-            <Ionicons name="star-outline" size={24} color="#F5A623" />
-            <Text style={styles.metricaValor}>-</Text>
-            <Text style={styles.metricaLabel}>Avaliação</Text>
+            <Ionicons
+              name={ctrl.mediaAvaliacao ? "star" : "star-outline"}
+              size={24}
+              color="#F5A623"
+            />
+            <Text style={styles.metricaValor}>
+              {ctrl.carregandoResumo
+                ? '...'
+                : ctrl.mediaAvaliacao
+                  ? ctrl.mediaAvaliacao.toFixed(1)
+                  : '-'}
+            </Text>
+            <Text style={styles.metricaLabel}>
+              {ctrl.totalAvaliacoes > 0
+                ? `${ctrl.totalAvaliacoes} avaliação${ctrl.totalAvaliacoes > 1 ? 'ões' : ''}`
+                : 'Avaliação'}
+            </Text>
           </View>
         </View>
 
@@ -151,3 +166,4 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' }
 });
+

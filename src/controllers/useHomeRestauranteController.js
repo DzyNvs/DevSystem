@@ -9,6 +9,8 @@ export const useHomeRestauranteController = () => {
   const [resumo, setResumo] = useState({ totalPedidos: 0, totalVendas: 0 });
   const [carregandoResumo, setCarregandoResumo] = useState(true);
   const [nomeRestaurante, setNomeRestaurante] = useState("");
+  const [mediaAvaliacao, setMediaAvaliacao] = useState(null);
+  const [totalAvaliacoes, setTotalAvaliacoes] = useState(0);
   
   // 👉 Estado para a bolinha vermelha do botão
   const [pedidosPendentes, setPedidosPendentes] = useState(0);
@@ -31,6 +33,14 @@ export const useHomeRestauranteController = () => {
           
           if (dadosRestaurante.nomeFantasia) {
             setNomeRestaurante(dadosRestaurante.nomeFantasia);
+          }
+
+          // Lê a média de avaliação já calculada pelo AvaliacaoModel
+          if (typeof dadosRestaurante.avaliacao === 'number') {
+            setMediaAvaliacao(dadosRestaurante.avaliacao);
+          }
+          if (typeof dadosRestaurante.total_avaliacoes === 'number') {
+            setTotalAvaliacoes(dadosRestaurante.total_avaliacoes);
           }
 
           if (!idRestauranteReal) return;
@@ -86,6 +96,8 @@ export const useHomeRestauranteController = () => {
     resumo, 
     carregandoResumo,
     nomeRestaurante,
-    pedidosPendentes // 👉 Exportando o número
+    pedidosPendentes,
+    mediaAvaliacao,
+    totalAvaliacoes,
   };
 };

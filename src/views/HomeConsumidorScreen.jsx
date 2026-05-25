@@ -174,10 +174,6 @@ export function HomeConsumidorScreen() {
             <View style={styles.footerColumn}>
               <Text style={styles.footerTitle}>Links rápidos</Text>
               <View style={styles.footerLinksList}>
-                <TouchableOpacity>
-                  <Text style={styles.footerLinkItem}>Restaurantes</Text>
-                </TouchableOpacity>
-
                 {/* LINK "COMO FUNCIONA" MANTIDO */}
                 <TouchableOpacity onPress={() => router.push("/como-funciona")}>
                   <Text style={styles.footerLinkItem}>Como funciona</Text>
@@ -189,17 +185,6 @@ export function HomeConsumidorScreen() {
               </View>
             </View>
 
-            <View style={styles.footerColumn}>
-              <Text style={styles.footerTitle}>Suporte</Text>
-              <View style={styles.footerLinksList}>
-                <TouchableOpacity>
-                  <Text style={styles.footerLinkItem}>FAQ</Text>
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Text style={styles.footerLinkItem}>Envios & frete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
 
             <View style={styles.footerColumn}>
               <Text style={styles.socialTitle}>Nossas redes</Text>

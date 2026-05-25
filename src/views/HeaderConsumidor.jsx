@@ -1,3 +1,4 @@
+
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router"; // 👉 usePathname mantido
 import {
@@ -137,10 +138,6 @@ export function HeaderConsumidor() {
               >
                 Início
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity>
-              <Text style={styles.navText}>Restaurantes</Text>
             </TouchableOpacity>
 
             {/* Sobre nós fica verde se o pathname for /sobre-nos */}

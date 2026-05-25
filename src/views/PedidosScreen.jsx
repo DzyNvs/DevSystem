@@ -20,7 +20,6 @@ const agruparAdicionais = (adicionais) => {
     if (agrupado[add.nome]) {
       agrupado[add.nome].qtd += (add.qtd || 1);
     } else {
-      // Se não tiver a propriedade "qtd" vinda do banco, assumimos 1
       agrupado[add.nome] = { ...add, qtd: add.qtd || 1 };
     }
   });
@@ -38,7 +37,6 @@ export function PedidosScreen() {
   const [codigoDigitado, setCodigoDigitado] = useState('');
   const [processando, setProcessando] = useState(false);
 
-  // 👉 Novos estados para o modal de informações
   const [modalInfoVisivel, setModalInfoVisivel] = useState(false);
   const [pedidoInfo, setPedidoInfo] = useState(null);
 
@@ -48,6 +46,7 @@ export function PedidosScreen() {
     { id: 'preparando', nome: 'Em Preparo' },
     { id: 'saiu_entrega', nome: 'Em envio' },
     { id: 'entregue', nome: 'Finalizado' },
+    { id: 'avaliado', nome: 'Avaliações' },
     { id: 'recusado', nome: 'Recusados' },
     { id: 'todos', nome: 'Todos os pedidos' },
   ];
@@ -66,6 +65,7 @@ export function PedidosScreen() {
 
   const pedidosFiltrados = ctrl.pedidos.filter(pedido => {
     if (abaAtiva === 'todos') return true;
+    if (abaAtiva === 'avaliado') return pedido.avaliado === true;
     return pedido.status === abaAtiva;
   });
 
@@ -164,7 +164,6 @@ export function PedidosScreen() {
                 </Text>
               </View>
               
-              {/* 👉 Renderização de adicionais agrupados corrigida */}
               {produto.adicionais && produto.adicionais.length > 0 && agruparAdicionais(produto.adicionais).map((add, idx) => (
                 <View key={`add-${idx}`} style={styles.comandaItemAdicional}>
                   <Text style={styles.comandaAdicionalNome}>
@@ -183,6 +182,33 @@ export function PedidosScreen() {
           <Text style={styles.textoDetalhe}>Total: </Text>
           <Text style={styles.textoTotal}>R$ {item.total_final?.toFixed(2).replace('.', ',')}</Text>
         </View>
+
+        {/* 👉 Bloco de avaliação — aparece em qualquer pedido avaliado */}
+        {item.avaliado && (
+          <View style={styles.avaliacaoContainer}>
+            <View style={styles.avaliacaoDivisor} />
+            <View style={styles.avaliacaoHeader}>
+              <Ionicons name="star" size={14} color="#F5A623" />
+              <Text style={styles.avaliacaoTitulo}>Avaliação do Cliente</Text>
+              <View style={styles.avaliacaoEstrelas}>
+                {[1, 2, 3, 4, 5].map((estrela) => (
+                  <Ionicons
+                    key={estrela}
+                    name={estrela <= (item.avaliacao || 0) ? 'star' : 'star-outline'}
+                    size={14}
+                    color="#F5A623"
+                  />
+                ))}
+                <Text style={styles.avaliacaoNota}>{item.avaliacao?.toFixed(1)}</Text>
+              </View>
+            </View>
+            {item.comentario_avaliacao ? (
+              <Text style={styles.avaliacaoComentario}>"{item.comentario_avaliacao}"</Text>
+            ) : (
+              <Text style={styles.avaliacaoSemComentario}>Sem comentário.</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.acoesContainer}>
           {item.status === 'pendente' && (
@@ -415,7 +441,7 @@ const styles = StyleSheet.create({
   comandaTitulo: { fontSize: 10, fontWeight: 'bold', color: '#777', textAlign: 'center', letterSpacing: 1 },
   comandaDivisor: { height: 1, backgroundColor: '#EAEAEA', marginVertical: 6 },
   
-  // Estilos da Comanda e Adicionais
+  // Comanda e Adicionais
   comandaItemWrapper: { marginBottom: 6 },
   comandaItem: { flexDirection: 'row', alignItems: 'flex-start' },
   comandaItemQtd: { fontSize: 12, fontWeight: 'bold', color: '#333', width: 22 },
@@ -433,6 +459,16 @@ const styles = StyleSheet.create({
   btnRecusar: { backgroundColor: '#D32F2F' }, 
   btnPadrao: { backgroundColor: '#93BD57' },
   txtBtnBranco: { color: '#FFF', fontWeight: 'bold', fontSize: 11 },
+
+  // Avaliação
+  avaliacaoContainer: { marginTop: 10, paddingTop: 2 },
+  avaliacaoDivisor: { height: 1, backgroundColor: '#EAEAEA', marginBottom: 8 },
+  avaliacaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  avaliacaoTitulo: { fontSize: 10, fontWeight: 'bold', color: '#777', flex: 1, letterSpacing: 0.5 },
+  avaliacaoEstrelas: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  avaliacaoNota: { fontSize: 11, fontWeight: 'bold', color: '#F5A623', marginLeft: 2 },
+  avaliacaoComentario: { fontSize: 11, color: '#444', fontStyle: 'italic', lineHeight: 16, paddingLeft: 2 },
+  avaliacaoSemComentario: { fontSize: 11, color: '#AAA', fontStyle: 'italic', paddingLeft: 2 },
   
   // Modais Base
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -446,7 +482,7 @@ const styles = StyleSheet.create({
   txtBtnModal: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
   txtBtnModalColor: { color: '#333', fontSize: 16, fontWeight: 'bold' },
 
-  // Estilos do Modal de Informações
+  // Modal de Informações
   modalContentInfo: { width: '100%', maxWidth: 450, backgroundColor: '#FFF', padding: 20, borderRadius: 16, elevation: 5, maxHeight: '80%' },
   modalInfoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#EAEAEA', paddingBottom: 15, marginBottom: 15 },
   modalTituloInfo: { fontSize: 18, fontWeight: 'bold', color: '#333' },
@@ -457,5 +493,5 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 2 },
   infoTexto: { fontSize: 15, color: '#333', lineHeight: 22 },
   trocoContainer: { flexDirection: 'row', backgroundColor: '#FFEBEE', padding: 15, borderRadius: 8, alignItems: 'center', gap: 12, marginTop: 5 },
-  textoTrocoDestaque: { fontSize: 18, fontWeight: 'bold', color: '#D32F2F', marginTop: 5 }
+  textoTrocoDestaque: { fontSize: 18, fontWeight: 'bold', color: '#D32F2F', marginTop: 5 },
 });
