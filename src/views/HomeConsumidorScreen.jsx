@@ -116,14 +116,6 @@ export function HomeConsumidorScreen() {
             </View>
 
             <View style={styles.footerColumn}>
-              <Text style={styles.footerTitle}>Suporte</Text>
-              <View style={styles.footerLinksList}>
-                <TouchableOpacity><Text style={styles.footerLinkItem}>FAQ</Text></TouchableOpacity>
-                <TouchableOpacity><Text style={styles.footerLinkItem}>Envios & frete</Text></TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.footerColumn}>
               <Text style={styles.socialTitle}>Nossas redes</Text>
               <View style={styles.socialRow}>
                 <TouchableOpacity onPress={() => router.push('/contatos')}><Image source={fbIcon} style={styles.socialIconFooter} /></TouchableOpacity>
@@ -163,7 +155,7 @@ const styles = StyleSheet.create({
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, justifyContent: 'center' },
   footerContainer: { backgroundColor: '#FFFDE1', paddingHorizontal: 70, paddingBottom: 40, marginTop: 50 },
   footerLine: { width: '100%', height: 1, backgroundColor: '#A0A6B6', marginVertical: 45 },
-  footerColumnsRow: { flexDirection: 'row', justifyContent: 'flex-start' },
+  footerColumnsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   footerBrandCol: { width: 300 },
   logo2Img: { height: 100, width: 200, marginBottom: 5, marginLeft: -15 },
   footerBrandText: { fontSize: 18, color: '#000' },
