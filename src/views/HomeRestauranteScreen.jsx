@@ -31,7 +31,7 @@ export function HomeRestauranteScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>
-          Resumo de hoje {ctrl.nomeRestaurante ? `- ${ctrl.nomeRestaurante}` : ''}
+          Resumo da Loja {ctrl.nomeRestaurante ? `- ${ctrl.nomeRestaurante}` : ''}
         </Text>
         
         <View style={styles.metricasRow}>

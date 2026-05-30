@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -168,25 +168,7 @@ export function LoginScreen() {
           
           {/* Em telas grandes mostra ambos os itens; em telas pequenas mostra apenas Ambiente seguro */}
           <View style={styles.rightItems}>
-            {!isSmallScreen && (
-              <TouchableOpacity
-                style={[
-                  styles.restauranteGroup,
-                  highlightRestaurante && styles.restauranteAtivo,
-                ]}
-                onPress={() => setHighlightRestaurante(!highlightRestaurante)}
-              >
-                <Image source={store} style={styles.storeIcon} resizeMode="contain" />
-                <Text
-                  style={[
-                    styles.restauranteText,
-                    highlightRestaurante && styles.restauranteTextAtivo,
-                  ]}
-                >
-                  Sou restaurante
-                </Text>
-              </TouchableOpacity>
-            )}
+            
             <View style={styles.ambienteGroup}>
               <Image source={vector} style={styles.vectorIcon} resizeMode="contain" />
               <Text style={styles.ambienteText}>Ambiente 100% seguro</Text>
