@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { ProdutoModel } from '../models/ProdutoModel';
 
@@ -46,19 +46,30 @@ export const useCardapioController = () => {
     }
   };
 
-  const deletarProduto = async (idProduto) => {
-    const confirmacao = Platform.OS === 'web'
-      ? window.confirm("Tem certeza que deseja excluir este prato?")
-      : true;
-
-    if (confirmacao) {
+  const deletarProduto = (idProduto) => {
+    const executarDelecao = async () => {
       try {
         await ProdutoModel.deletar(idProduto);
-        alert("Prato excluído com sucesso!");
+        Alert.alert("Sucesso", "Prato excluído com sucesso!");
         carregarProdutos();
       } catch (error) {
-        alert("Erro ao excluir o prato.");
+        Alert.alert("Erro", "Não foi possível excluir o prato.");
       }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("Tem certeza que deseja excluir este prato?")) {
+        executarDelecao();
+      }
+    } else {
+      Alert.alert(
+        "Excluir prato",
+        "Tem certeza que deseja excluir este prato? Esta ação não pode ser desfeita.",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Excluir", style: "destructive", onPress: executarDelecao },
+        ]
+      );
     }
   };
 

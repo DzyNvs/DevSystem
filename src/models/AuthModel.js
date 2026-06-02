@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
@@ -31,6 +31,10 @@ export const AuthModel = {
       data_criacao: new Date()
     });
 
+    // 5. Desfaz o login automático criado pelo Firebase após o cadastro.
+    // O usuário só poderá entrar depois de confirmar o e-mail.
+    await signOut(auth);
+
     return user;
   },
 
@@ -59,6 +63,10 @@ export const AuthModel = {
       id_restaurante: dados.id_restaurante,
       data_criacao: new Date()
     });
+
+    // 5. Desfaz o login automático criado pelo Firebase após o cadastro.
+    // O usuário só poderá entrar depois de confirmar o e-mail.
+    await signOut(auth);
 
     return user;
   },
@@ -92,6 +100,10 @@ export const AuthModel = {
       status_online: false,
       data_criacao: new Date()
     });
+
+    // 5. Desfaz o login automático criado pelo Firebase após o cadastro.
+    // O usuário só poderá entrar depois de confirmar o e-mail.
+    await signOut(auth);
 
     return user;
   }

@@ -1,13 +1,12 @@
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useHomeRestauranteController } from '../controllers/useHomeRestauranteController';
 import { HeaderRestaurante } from './HeaderRestaurante';
 
 export function HomeRestauranteScreen() {
   const ctrl = useHomeRestauranteController();
-  const [lojaAberta, setLojaAberta] = useState(true);
 
   return (
     <View style={styles.mainContainer}>
@@ -18,15 +17,15 @@ export function HomeRestauranteScreen() {
         <View style={styles.statusContainer}>
           <View>
             <Text style={styles.statusTitulo}>Status da Loja</Text>
-            <Text style={[styles.statusTexto, { color: lojaAberta ? '#2e7d32' : '#D32F2F' }]}>
-              {lojaAberta ? '🟢 Aberta para pedidos' : '🔴 Fechada no momento'}
+            <Text style={[styles.statusTexto, { color: ctrl.lojaAberta ? '#2e7d32' : '#D32F2F' }]}>
+              {ctrl.lojaAberta ? '🟢 Aberta para pedidos' : '🔴 Fechada no momento'}
             </Text>
           </View>
-          <Switch 
-            value={lojaAberta} 
-            onValueChange={setLojaAberta} 
+          <Switch
+            value={ctrl.lojaAberta}
+            onValueChange={ctrl.toggleLojaAberta}
             trackColor={{ false: '#FFCDCD', true: '#A5D6A7' }}
-            thumbColor={lojaAberta ? '#4CAF50' : '#D32F2F'}
+            thumbColor={ctrl.lojaAberta ? '#4CAF50' : '#D32F2F'}
           />
         </View>
 

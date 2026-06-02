@@ -5,6 +5,33 @@ import { Alert, Platform } from 'react-native';
 import { db } from '../config/firebase';
 import { AuthModel } from '../models/AuthModel';
 
+const validarCNPJ = (cnpj) => {
+  const numeros = cnpj.replace(/\D/g, '');
+
+  if (numeros.length !== 14) return false;
+
+  // Rejeita sequências iguais: 00.000.000/0000-00, 11.111.111/1111-11, etc.
+  if (/^(\d)\1{13}$/.test(numeros)) return false;
+
+  // Valida 1º dígito verificador
+  const pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let soma = 0;
+  for (let i = 0; i < 12; i++) soma += parseInt(numeros[i]) * pesos1[i];
+  let resto = soma % 11;
+  const dv1 = resto < 2 ? 0 : 11 - resto;
+  if (dv1 !== parseInt(numeros[12])) return false;
+
+  // Valida 2º dígito verificador
+  const pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  soma = 0;
+  for (let i = 0; i < 13; i++) soma += parseInt(numeros[i]) * pesos2[i];
+  resto = soma % 11;
+  const dv2 = resto < 2 ? 0 : 11 - resto;
+  if (dv2 !== parseInt(numeros[13])) return false;
+
+  return true;
+};
+
 const validarCPF = (cpf) => {
   const numeros = cpf.replace(/\D/g, '');
 
@@ -123,6 +150,7 @@ export const useAuthController = () => {
 
       if (tipoUsuario === 'restaurante') {
         if (!cnpj) throw new Error("CNPJ_VAZIO");
+        if (!validarCNPJ(cnpj)) throw new Error("CNPJ_INVALIDO");
         const id_restaurante = `rest_${numeroAleatorio}`;
         await AuthModel.registrarRestaurante({ email, nomeFantasia, razaoSocial, cnpj, id_restaurante });
 
@@ -179,6 +207,7 @@ export const useAuthController = () => {
       else if (error.message === "CPF_JA_CADASTRADO") mensagemErro = "Este CPF já está cadastrado. Tente fazer login.";
       else if (error.message === "CNPJ_JA_CADASTRADO") mensagemErro = "Este CNPJ já está cadastrado. Tente fazer login.";
       else if (error.message === "CNPJ_VAZIO") mensagemErro = "Por favor, preencha o campo de CNPJ.";
+      else if (error.message === "CNPJ_INVALIDO") mensagemErro = "CNPJ inválido. Verifique os dígitos e tente novamente.";
       else if (error.message === "DATA_NASCIMENTO_VAZIA") mensagemErro = "Por favor, informe sua data de nascimento.";
       else if (error.message === "DATA_NASCIMENTO_INVALIDA") mensagemErro = "Data de nascimento inválida. Use o formato DD/MM/AAAA.";
       else if (error.message === "DATA_NASCIMENTO_FUTURA") mensagemErro = "Data de nascimento inválida. A data não pode ser hoje ou no futuro.";

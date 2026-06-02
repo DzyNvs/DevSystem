@@ -147,10 +147,18 @@ app.post('/verificar-codigo-login', async (req, res) => {
       return res.status(400).json({ erro: "Código inválido." });
     }
     const userRecord = await admin.auth().getUserByEmail(email);
+
+    // Bloqueia login antes de gerar o token se o e-mail ainda não foi confirmado.
+    // Admin interno fica isento (mesma exceção já aplicada no frontend).
+    const ehAdmin = email.toLowerCase() === "devsystemimpacta@gmail.com";
+    if (!ehAdmin && !userRecord.emailVerified) {
+      return res.status(403).json({ erro: "EMAIL_NAO_VERIFICADO" });
+    }
+
     const token = await admin.auth().createCustomToken(userRecord.uid);
     return res.status(200).json({ token });
-  } catch (error) { 
-    return res.status(500).json({ erro: "Erro na autenticação." }); 
+  } catch (error) {
+    return res.status(500).json({ erro: "Erro na autenticação." });
   }
 });
 

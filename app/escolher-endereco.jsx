@@ -188,10 +188,10 @@ export default function EscolherEnderecoScreen() {
       return;
     }
     const numeroFinal = numero.trim() || 'S/N';
-    // Rejeita valores que não sejam vazios, nem contenham dígito, nem sejam "S/N" explícito
+    // Aceita apenas dígitos puros (ex: 123) ou "S/N". Rejeita 12A, ABC, etc.
     const eSN = /^s\/?n$/i.test(numeroFinal);
-    if (!eSN && !/\d/.test(numeroFinal)) {
-      Alert.alert('Atenção', 'Número inválido. Use dígitos (ex: 123, 12A) ou deixe em branco para S/N.');
+    if (!eSN && !/^\d+$/.test(numeroFinal)) {
+      Alert.alert('Atenção', 'Número inválido. Use apenas dígitos (ex: 123) ou deixe em branco para S/N.');
       return;
     }
     if (!rua.trim())    { Alert.alert('Atenção', 'Preencha o nome da rua.'); return; }

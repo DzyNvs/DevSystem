@@ -1,12 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import React from 'react';
-import { ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../../src/config/firebase';
 import { useMotoboyController } from '../../src/controllers/useMotoboyController';
 
 export default function MotoboyDashboardScreen() {
   const router = useRouter();
   const { perfil, pedidosDisponiveis, estatisticas, carregando, aceitarPedido, atualizar } = useMotoboyController();
+
+  const handleSair = () => {
+    Alert.alert('Sair', 'Deseja encerrar sua sessão?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut(auth);
+          router.replace('/');
+        },
+      },
+    ]);
+  };
 
   const handleAceitar = async (idPedido) => {
     const sucesso = await aceitarPedido(idPedido);
@@ -34,9 +50,14 @@ export default function MotoboyDashboardScreen() {
           <Text style={styles.boasVindas}>Olá, {perfil?.nome || 'Entregador'}</Text>
           <Text style={styles.statusOnline}>● Online (ID: {perfil?.id_motoboy || 'N/A'})</Text>
         </View>
-        <TouchableOpacity onPress={() => atualizar()} style={styles.btnRefresh}>
-          <Ionicons name="refresh" size={24} color="#FFF" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity onPress={() => atualizar()} style={styles.btnRefresh}>
+            <Ionicons name="refresh" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSair} style={styles.btnSair}>
+            <Ionicons name="log-out-outline" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ESTATÍSTICAS REAIS (PUXADAS DO BANCO) */}
@@ -114,6 +135,11 @@ const styles = StyleSheet.create({
   },
   btnRefresh: {
     backgroundColor: '#93BD57',
+    padding: 8,
+    borderRadius: 50,
+  },
+  btnSair: {
+    backgroundColor: '#E57373',
     padding: 8,
     borderRadius: 50,
   },

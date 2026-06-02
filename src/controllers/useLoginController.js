@@ -172,6 +172,9 @@ export const useLoginController = () => {
       router.replace("/home-consumidor-screen");
     } catch (error) {
       console.log("Erro no login:", error);
+      // O backend agora retorna "EMAIL_NAO_VERIFICADO" antes mesmo de emitir o token;
+      // o fallback do frontend (auth.currentUser.reload + signOut) cobre o caso de
+      // backend desatualizado.
       if (error.message === "EMAIL_NAO_VERIFICADO") {
         setErro(
           "E-mail não confirmado. Acesse sua caixa de entrada e clique no link de verificação antes de fazer login.",

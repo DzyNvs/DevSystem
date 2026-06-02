@@ -273,10 +273,23 @@ export default function OnboardingRestauranteScreen() {
 
   const handleHoraChange = (dia, campo, valor) => {
     setErros((prev) => ({ ...prev, horarios: null }));
-    let formatado = valor.replace(/\D/g, "");
-    if (formatado.length > 4) formatado = formatado.slice(0, 4);
+    let digitos = valor.replace(/\D/g, "");
+    if (digitos.length > 4) digitos = digitos.slice(0, 4);
+
+    // Cap HH em 23 e MM em 59 enquanto digita
+    if (digitos.length >= 2) {
+      const hh = parseInt(digitos.slice(0, 2), 10);
+      if (hh > 23) digitos = "23" + digitos.slice(2);
+    }
+    if (digitos.length === 4) {
+      const mm = parseInt(digitos.slice(2, 4), 10);
+      if (mm > 59) digitos = digitos.slice(0, 2) + "59";
+    }
+
+    let formatado = digitos;
     if (formatado.length > 2)
       formatado = formatado.replace(/^(\d{2})(\d)/, "$1:$2");
+
     setHorarios((prev) => ({
       ...prev,
       [dia]: { ...prev[dia], [campo]: formatado },
@@ -294,6 +307,9 @@ export default function OnboardingRestauranteScreen() {
     if (!endereco.cep) novosErros.cep = "CEP é obrigatório.";
     if (!endereco.rua) novosErros.rua = "Rua é obrigatória.";
     if (!endereco.numero) novosErros.numero = "Número é obrigatório.";
+    else if (!/^\d+$/.test(endereco.numero.trim())) {
+      novosErros.numero = "Número deve conter apenas dígitos (ex: 123).";
+    }
     if (!endereco.bairro) novosErros.bairro = "Bairro é obrigatório.";
     if (!endereco.cidade) novosErros.cidade = "Cidade é obrigatória.";
     if (!endereco.estado) novosErros.estado = "UF é obrigatória.";
@@ -309,12 +325,21 @@ export default function OnboardingRestauranteScreen() {
       novosErros.horarios = "Selecione pelo menos um dia de funcionamento.";
     } else {
       for (let dia of diasAtivos) {
-        if (
-          horarios[dia].abertura.length < 5 ||
-          horarios[dia].fechamento.length < 5
-        ) {
+        const ab = horarios[dia].abertura;
+        const fe = horarios[dia].fechamento;
+        if (ab.length < 5 || fe.length < 5) {
           novosErros.horarios =
             "Preencha os horários corretamente (ex: 08:00).";
+          break;
+        }
+        const [hhAb, mmAb] = ab.split(":").map((n) => parseInt(n, 10));
+        const [hhFe, mmFe] = fe.split(":").map((n) => parseInt(n, 10));
+        if (
+          isNaN(hhAb) || isNaN(mmAb) || isNaN(hhFe) || isNaN(mmFe) ||
+          hhAb > 23 || mmAb > 59 || hhFe > 23 || mmFe > 59
+        ) {
+          novosErros.horarios =
+            "Horário inválido. Use o formato HH:MM (00:00 a 23:59).";
           break;
         }
       }

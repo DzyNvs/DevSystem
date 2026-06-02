@@ -100,6 +100,13 @@ export function RestauranteDetalhesScreen() {
                 {ctrl.restaurante?.especialidade || "Alimentação Saudável"}
               </Text>
 
+              <View style={[styles.statusBadge, { backgroundColor: ctrl.lojaAberta ? '#E8F5E9' : '#FFEBEE' }]}>
+                <View style={[styles.statusDot, { backgroundColor: ctrl.lojaAberta ? '#4CAF50' : '#E53935' }]} />
+                <Text style={[styles.statusBadgeText, { color: ctrl.lojaAberta ? '#2E7D32' : '#C62828' }]}>
+                  {ctrl.lojaAberta ? 'Aberta agora' : 'Fechada no momento'}
+                </Text>
+              </View>
+
               <View style={styles.detailsRow}>
                 <View style={styles.detailCol}>
                   <Ionicons name="cash-outline" size={16} color="#777" />
@@ -299,8 +306,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#2E7D32",
     fontStyle: "italic",
-    marginBottom: 12,
+    marginBottom: 8,
   },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 4,
+    gap: 6,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusBadgeText: { fontSize: 13, fontWeight: "600" },
   detailsRow: {
     flexDirection: "row",
     justifyContent: "flex-start",

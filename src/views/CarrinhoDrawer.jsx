@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 
+import { db } from "../config/firebase";
 import { useCarrinhoStore } from "../controllers/useCarrinhoStore";
 import { RestauranteModel } from "../models/RestauranteModel";
 
@@ -27,21 +29,37 @@ export function CarrinhoDrawer() {
     limparCarrinho,
   } = useCarrinhoStore();
 
-  // 👉 NOVO: Estado para armazenar o valor do pedido mínimo
   const [pedidoMinimo, setPedidoMinimo] = useState(0);
+  // IDs dos produtos do Firestore que estão com disponivel === false
+  const [itensPausados, setItensPausados] = useState(new Set());
 
-  // 👉 NOVO: Busca o pedido mínimo no banco toda vez que abrir a gaveta com um restaurante vinculado
   useEffect(() => {
     if (drawerAberto && restauranteId) {
       RestauranteModel.buscarPorId(restauranteId)
-        .then((res) => {
-          setPedidoMinimo(Number(res?.pedido_minimo || 0));
-        })
-        .catch((err) => {
-          console.error("Erro ao buscar pedido mínimo na gaveta", err);
-        });
+        .then((res) => setPedidoMinimo(Number(res?.pedido_minimo || 0)))
+        .catch((err) => console.error("Erro ao buscar pedido mínimo na gaveta", err));
     }
   }, [drawerAberto, restauranteId]);
+
+  // Listener em tempo real: detecta pausas enquanto o drawer está aberto
+  useEffect(() => {
+    if (!restauranteId || itens.length === 0) {
+      setItensPausados(new Set());
+      return;
+    }
+    const q = query(
+      collection(db, "produtos"),
+      where("id_restaurante", "==", restauranteId)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const pausados = new Set();
+      snap.docs.forEach((d) => {
+        if (d.data().disponivel === false) pausados.add(d.id);
+      });
+      setItensPausados(pausados);
+    });
+    return () => unsub();
+  }, [restauranteId, itens.length]);
 
   // Soma do prato + adicionais para garantir o valor correto no Drawer
   const valorTotal = itens.reduce((acc, item) => {
@@ -56,9 +74,9 @@ export function CarrinhoDrawer() {
     0,
   );
 
-  // 👉 NOVO: Lógica para bloquear o botão se estiver abaixo do mínimo
   const isAbaixoMinimo = valorTotal > 0 && valorTotal < pedidoMinimo;
   const faltaParaMinimo = pedidoMinimo - valorTotal;
+  const temItemPausado = itens.some((item) => itensPausados.has(item.produtoId));
 
   const irParaPagamento = () => {
     fecharDrawer();
@@ -101,27 +119,36 @@ export function CarrinhoDrawer() {
               </View>
             ) : (
               itens.map((item) => {
-                // Cálculo unitário para exibir na tela (base + extras)
                 const valorAdicionais =
                   item.adicionais?.reduce((sum, a) => sum + Number(a.preco || 0), 0) || 0;
                 const precoUnitarioTotal = Number(item.preco) + valorAdicionais;
+                const pausado = itensPausados.has(item.produtoId);
 
                 return (
-                  <View key={item.id} style={styles.itemCard}>
-                    {/* Foto do produto puxando do Firebase, com um placeholder caso falhe */}
+                  <View
+                    key={item.id}
+                    style={[styles.itemCard, pausado && styles.itemCardPausado]}
+                  >
                     <Image
-                      source={{
-                        uri: item.foto || "https://via.placeholder.com/60",
-                      }}
-                      style={styles.itemFoto}
+                      source={{ uri: item.foto || "https://via.placeholder.com/60" }}
+                      style={[styles.itemFoto, pausado && styles.itemFotoPausada]}
                     />
 
                     <View style={styles.itemInfo}>
-                      <Text style={styles.itemNome} numberOfLines={2}>
-                        {item.nome}
-                      </Text>
+                      <View style={styles.itemNomeRow}>
+                        <Text
+                          style={[styles.itemNome, pausado && styles.itemNomePausado]}
+                          numberOfLines={2}
+                        >
+                          {item.nome}
+                        </Text>
+                        {pausado && (
+                          <View style={styles.badgeEmFalta}>
+                            <Text style={styles.badgeEmFaltaText}>Em falta</Text>
+                          </View>
+                        )}
+                      </View>
 
-                      {/* Renderização dos Adicionais escolhidos */}
                       {item.adicionais && item.adicionais.length > 0 && (
                         <View style={styles.adicionaisContainer}>
                           {item.adicionais.map((adc, idx) => (
@@ -132,19 +159,17 @@ export function CarrinhoDrawer() {
                         </View>
                       )}
 
-                      <Text style={styles.itemPrecoUnit}>
+                      <Text style={[styles.itemPrecoUnit, pausado && { color: "#BDBDBD" }]}>
                         R$ {precoUnitarioTotal.toFixed(2).replace(".", ",")} / un
                       </Text>
                     </View>
 
                     <View style={styles.itemRight}>
-                      {/* Controles de Quantidade (+ e -) */}
                       <View style={styles.controleQtd}>
                         <TouchableOpacity
                           style={styles.btnQtd}
                           onPress={() => removerItem(item.id)}
                         >
-                          {/* Se a qtd for 1, mostra lixeirinha. Se for maior, mostra um "menos" */}
                           <Ionicons
                             name={item.qtd === 1 ? "trash-outline" : "remove"}
                             size={16}
@@ -156,14 +181,14 @@ export function CarrinhoDrawer() {
 
                         <TouchableOpacity
                           style={styles.btnQtd}
-                          // Passamos o array de adicionais para o Zustand manter a coerência da chave
+                          disabled={pausado}
                           onPress={() => adicionarItem(item, restauranteId, 1, item.adicionais)}
                         >
-                          <Ionicons name="add" size={16} color="#93BD57" />
+                          <Ionicons name="add" size={16} color={pausado ? "#CCC" : "#93BD57"} />
                         </TouchableOpacity>
                       </View>
 
-                      <Text style={styles.itemPrecoTotal}>
+                      <Text style={[styles.itemPrecoTotal, pausado && { color: "#BDBDBD" }]}>
                         R$ {(precoUnitarioTotal * item.qtd).toFixed(2).replace(".", ",")}
                       </Text>
                     </View>
@@ -192,13 +217,20 @@ export function CarrinhoDrawer() {
               </Text>
             </View>
 
-            {/* 👉 NOVO: Aviso visual de falta de valor para o pedido mínimo */}
             {isAbaixoMinimo && (
               <View style={styles.avisoMinimoContainer}>
                 <Ionicons name="alert-circle" size={16} color="#D32F2F" />
                 <Text style={styles.avisoMinimoTexto}>
-                  Faltam R$ {faltaParaMinimo.toFixed(2).replace(".", ",")} para
-                  o pedido mínimo.
+                  Faltam R$ {faltaParaMinimo.toFixed(2).replace(".", ",")} para o pedido mínimo.
+                </Text>
+              </View>
+            )}
+
+            {temItemPausado && (
+              <View style={styles.avisoPausadoContainer}>
+                <Ionicons name="warning-outline" size={16} color="#C62828" />
+                <Text style={styles.avisoPausadoTexto}>
+                  Remova os itens "Em falta" para continuar.
                 </Text>
               </View>
             )}
@@ -206,12 +238,11 @@ export function CarrinhoDrawer() {
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
-                /* O botão fica inativo se estiver vazio OU abaixo do mínimo */
-                (itens.length === 0 || isAbaixoMinimo) &&
+                (itens.length === 0 || isAbaixoMinimo || temItemPausado) &&
                   styles.btnFinalizarInativo,
               ]}
               onPress={irParaPagamento}
-              disabled={itens.length === 0 || isAbaixoMinimo}
+              disabled={itens.length === 0 || isAbaixoMinimo || temItemPausado}
             >
               <Text style={styles.btnFinalizarText}>Ir para Pagamento</Text>
             </TouchableOpacity>
@@ -284,19 +315,46 @@ const styles = StyleSheet.create({
     borderColor: "#F0F0F0",
     gap: 12,
   },
+  itemCardPausado: {
+    backgroundColor: "#FFF5F5",
+    borderColor: "#FFCDD2",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+  },
   itemFoto: {
     width: 50,
     height: 50,
     borderRadius: 8,
     backgroundColor: "#F5F5F5",
   },
+  itemFotoPausada: { opacity: 0.4 },
   itemInfo: { flex: 1 },
+  itemNomeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 4,
+  },
   itemNome: {
     fontFamily: "Nunito",
     fontSize: 15,
     color: "#333",
     fontWeight: "600",
-    marginBottom: 4,
+  },
+  itemNomePausado: { color: "#BDBDBD" },
+  badgeEmFalta: {
+    backgroundColor: "#FFCDD2",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeEmFaltaText: {
+    fontFamily: "Nunito",
+    fontSize: 11,
+    color: "#C62828",
+    fontWeight: "700",
   },
   adicionaisContainer: { marginBottom: 4 },
   adicionalText: {
@@ -385,7 +443,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-  // 👉 NOVOS ESTILOS DO AVISO:
   avisoMinimoContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -398,6 +455,24 @@ const styles = StyleSheet.create({
   avisoMinimoTexto: {
     fontFamily: "Nunito",
     color: "#D32F2F",
+    fontWeight: "bold",
+    fontSize: 13,
+    flex: 1,
+  },
+  avisoPausadoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  avisoPausadoTexto: {
+    fontFamily: "Nunito",
+    color: "#C62828",
     fontWeight: "bold",
     fontSize: 13,
     flex: 1,

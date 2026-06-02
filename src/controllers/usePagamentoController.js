@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { auth, db } from "../config/firebase";
 import { AvaliacaoModel } from "../models/AvaliacaoModel";
 import { PedidoModel } from "../models/PedidoModel";
+import { ProdutoModel } from "../models/ProdutoModel";
 import { RestauranteModel } from "../models/RestauranteModel";
 import { useCarrinhoStore } from "./useCarrinhoStore";
 
@@ -191,6 +192,22 @@ export const usePagamentoController = () => {
     }
     if (formaPagamentoEntrega === "dinheiro" && requerTroco && Number(valorEntregue) < totalFinal) {
       return alert("O valor entregue em dinheiro deve ser maior que o total do pedido!");
+    }
+
+    // Revalida disponibilidade no Firestore — item pode ter sido pausado depois de
+    // entrar no carrinho. Cliente precisa remover manualmente antes de prosseguir.
+    const indisponiveis = [];
+    for (const item of itens) {
+      if (!item.id) continue;
+      const produtoAtual = await ProdutoModel.buscarPorId(item.id);
+      if (!produtoAtual || produtoAtual.disponivel === false) {
+        indisponiveis.push(item.nome);
+      }
+    }
+    if (indisponiveis.length > 0) {
+      return alert(
+        `Os seguintes itens não estão mais disponíveis e precisam ser removidos do carrinho:\n\n• ${indisponiveis.join("\n• ")}`
+      );
     }
 
     setCarregando(true);

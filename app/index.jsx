@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -25,20 +25,33 @@ export default function Index() {
           // Checa se é restaurante
           const docRest = await getDoc(doc(db, "restaurantes", user.uid));
           if (docRest.exists()) {
+            if (!user.emailVerified) {
+              await signOut(auth);
+              setMostrarLogin(true);
+              setVerificando(false);
+              return;
+            }
             router.replace("/home-restaurante-screen");
             setVerificando(false);
             return;
           }
 
-          // Checa se é entregador (motoboy)
+          // Motoboy sempre vai para o login — sem auto-login na inicialização
           const docMoto = await getDoc(doc(db, "entregadores", user.uid));
           if (docMoto.exists()) {
-            router.replace("/motoboy/home");
+            await signOut(auth);
+            setMostrarLogin(true);
             setVerificando(false);
             return;
           }
 
-          // Se não é nenhum dos anteriores, assume consumidor
+          // Assume consumidor — também exige e-mail verificado
+          if (!user.emailVerified) {
+            await signOut(auth);
+            setMostrarLogin(true);
+            setVerificando(false);
+            return;
+          }
           router.replace("/home-consumidor-screen");
         } catch (error) {
           console.log("Erro ao verificar tipo de conta:", error);

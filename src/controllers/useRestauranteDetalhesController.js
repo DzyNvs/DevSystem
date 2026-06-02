@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { ProdutoModel } from "../models/ProdutoModel";
-import { RestauranteModel } from "../models/RestauranteModel";
+import { db } from "../config/firebase";
 import { useCarrinhoStore } from "./useCarrinhoStore";
 
 export const useRestauranteDetalhesController = () => {
@@ -12,6 +12,7 @@ export const useRestauranteDetalhesController = () => {
   const [carregandoRestaurante, setCarregandoRestaurante] = useState(true);
   const [carregandoProdutos, setCarregandoProdutos] = useState(true);
 
+  const [lojaAberta, setLojaAberta] = useState(true);
   const [pratoSelecionado, setPratoSelecionado] = useState(null);
   const [modalVisivel, setModalVisivel] = useState(false);
 
@@ -27,54 +28,58 @@ export const useRestauranteDetalhesController = () => {
   );
 
   useEffect(() => {
-    if (idRestaurante) {
-      carregarDados();
-    }
-  }, [idRestaurante]);
+    if (!idRestaurante) return;
 
-  const carregarDados = async () => {
     setCarregandoRestaurante(true);
     setCarregandoProdutos(true);
 
-    try {
-      const dadosRestaurante =
-        await RestauranteModel.buscarPorId(idRestaurante);
-      if (dadosRestaurante) {
+    // Listener em tempo real do restaurante — atualiza loja_aberta e dados gerais
+    const qRest = query(
+      collection(db, "restaurantes"),
+      where("id_restaurante", "==", idRestaurante)
+    );
+    const unsubRest = onSnapshot(qRest, (snap) => {
+      setCarregandoRestaurante(false);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        setLojaAberta(data.loja_aberta ?? true);
         setRestaurante({
-          ...dadosRestaurante,
-          avaliacao: dadosRestaurante.avaliacao || 5.0,
-          tempoEntrega: dadosRestaurante.tempo_entrega || "30-40",
-          // 👉 Agora verificamos se existe no banco. Se não existir, é 0 (Grátis)
+          ...data,
+          id: snap.docs[0].id,
+          avaliacao: data.avaliacao || 5.0,
+          tempoEntrega: data.tempo_entrega || "30-40",
           taxaEntrega:
-            dadosRestaurante.taxa_entrega !== undefined &&
-            dadosRestaurante.taxa_entrega !== null
-              ? Number(dadosRestaurante.taxa_entrega)
+            data.taxa_entrega !== undefined && data.taxa_entrega !== null
+              ? Number(data.taxa_entrega)
               : 0,
-          // 👉 NOVO: Garante a leitura do pedido mínimo vindo da API/Banco
           pedidoMinimo:
-            dadosRestaurante.pedido_minimo !== undefined &&
-            dadosRestaurante.pedido_minimo !== null
-              ? Number(dadosRestaurante.pedido_minimo)
+            data.pedido_minimo !== undefined && data.pedido_minimo !== null
+              ? Number(data.pedido_minimo)
               : 0,
           banner:
-            dadosRestaurante.imagens?.capaUrl ||
-            dadosRestaurante.banner ||
+            data.imagens?.capaUrl ||
+            data.banner ||
             "https://images.unsplash.com/photo-1490818387583-1b5ba45227d8?q=80&w=1200",
-          logo: dadosRestaurante.imagens?.logoUrl || null,
+          logo: data.imagens?.logoUrl || null,
         });
       }
+    });
 
-      const listaProdutos =
-        await ProdutoModel.buscarPorRestaurante(idRestaurante);
-      setProdutos(listaProdutos);
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao carregar dados do restaurante.");
-    } finally {
-      setCarregandoRestaurante(false);
+    // Listener em tempo real dos produtos — pausa e exclusão refletem imediatamente
+    const qProd = query(
+      collection(db, "produtos"),
+      where("id_restaurante", "==", idRestaurante)
+    );
+    const unsubProd = onSnapshot(qProd, (snap) => {
       setCarregandoProdutos(false);
-    }
-  };
+      setProdutos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => {
+      unsubRest();
+      unsubProd();
+    };
+  }, [idRestaurante]);
 
   const abrirPratoModal = (prato) => {
     setPratoSelecionado(prato);
@@ -101,6 +106,7 @@ export const useRestauranteDetalhesController = () => {
   return {
     restaurante,
     produtos,
+    lojaAberta,
     carregandoRestaurante,
     carregandoProdutos,
     pratoSelecionado,
@@ -108,14 +114,10 @@ export const useRestauranteDetalhesController = () => {
     abrirPratoModal,
     fecharPratoModal,
     handleAdicionarItem,
-
-    // 👉 EXPORTANDO OS STATES: Agora a View consegue ler e alterar esses valores
     minCal,
     setMinCal,
     maxCal,
     setMaxCal,
-
-    // 👉 NOVO: Exportando o estado do Toast para a View
     toastVisivel,
   };
 };
