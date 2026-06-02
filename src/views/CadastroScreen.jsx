@@ -184,10 +184,13 @@ export function CadastroScreen() {
             </TouchableOpacity>
           ) : (
             <View style={styles.rightItems}>
+              
+              {/* --- ADICIONADO O ÍCONE AO "SOU CLIENTE" --- */}
               <TouchableOpacity
                 style={[styles.restauranteGroup, ctrl.tipoUsuario === 'consumidor' && styles.restauranteAtivo]}
                 onPress={() => ctrl.setTipoUsuario('consumidor')}
               >
+                <Ionicons name="person-outline" size={22} color={ctrl.tipoUsuario === 'consumidor' ? "#FFF" : "#555"} />
                 <Text style={[styles.restauranteText, ctrl.tipoUsuario === 'consumidor' && styles.restauranteTextAtivo]}>
                   Sou cliente
                 </Text>
@@ -203,15 +206,7 @@ export function CadastroScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.restauranteGroup, ctrl.tipoUsuario === 'motoboy' && styles.restauranteAtivo]}
-                onPress={() => ctrl.setTipoUsuario('motoboy')}
-              >
-                <Ionicons name="bicycle-outline" size={22} color={ctrl.tipoUsuario === 'motoboy' ? "#FFF" : "#555"} />
-                <Text style={[styles.restauranteText, ctrl.tipoUsuario === 'motoboy' && styles.restauranteTextAtivo]}>
-                  Quero entregar
-                </Text>
-              </TouchableOpacity>
+              {/* A OPÇÃO "QUERO ENTREGAR" FOI REMOVIDA DAQUI! */}
             </View>
           )}
         </View>
